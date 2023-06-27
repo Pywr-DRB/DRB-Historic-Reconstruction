@@ -70,11 +70,14 @@ class StreamflowGenerator():
         fdc = np.quantile(Q, fdc_quantiles)
         
         # Translate flow to NEP
-        nep = np.interp(Q, fdc, fdc_quantiles, right = 0.999999, left = 0.0000001)
+        nep = np.interp(Q, fdc, fdc_quantiles, right = self.qs[-1] + 0.0000001, left = self.qs[0]-0.000001)
         return nep
 
     def nonexceedance_to_streamflow(self, nep_timeseries):
-        Q = np.interp(nep_timeseries, self.qs, self.predicted_fdc)
+        bound_percentage = 0.1
+        high_flow_bound = np.random.uniform(self.predicted_fdc[-1], self.predicted_fdc[-1] + bound_percentage*self.predicted_fdc[-1])
+        low_flow_bound = np.random.uniform(self.predicted_fdc[0] - bound_percentage*self.predicted_fdc[0], self.predicted_fdc[-0])
+        Q = np.interp(nep_timeseries, self.qs, self.predicted_fdc, right = high_flow_bound, left = low_flow_bound)
         return Q
 
 

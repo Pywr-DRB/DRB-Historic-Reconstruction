@@ -3,3 +3,4 @@ venv/
 */__pycache__/*
 */*/__pycache__/
 cache/
+__pycache__/diagnostic_plots.cpython-310.pyc
