@@ -74,9 +74,14 @@ class StreamflowGenerator():
         return nep
 
     def nonexceedance_to_streamflow(self, nep_timeseries):
+        
+        # The bound_percentage will determine how much (+/- %) random flow 
+        # is sampled when NEP > fdc_quantiles[-1] or NEP < fdc_quantiles[0] 
         bound_percentage = 0.1
-        high_flow_bound = np.random.uniform(self.predicted_fdc[-1], self.predicted_fdc[-1] + bound_percentage*self.predicted_fdc[-1])
-        low_flow_bound = np.random.uniform(self.predicted_fdc[0] - bound_percentage*self.predicted_fdc[0], self.predicted_fdc[-0])
+        high_flow_bound = np.random.uniform(self.predicted_fdc[-1], 
+                                            self.predicted_fdc[-1] + bound_percentage*self.predicted_fdc[-1])
+        low_flow_bound = np.random.uniform(self.predicted_fdc[0] - bound_percentage*self.predicted_fdc[0], 
+                                           self.predicted_fdc[-0])
         Q = np.interp(nep_timeseries, self.qs, self.predicted_fdc, right = high_flow_bound, left = low_flow_bound)
         return Q
 

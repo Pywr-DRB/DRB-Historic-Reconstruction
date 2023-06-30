@@ -5,3 +5,4 @@ pygeohydro
 geopy
 spei
 scikit-learn
+statsmodels
