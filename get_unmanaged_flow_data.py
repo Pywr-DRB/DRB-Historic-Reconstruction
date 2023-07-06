@@ -27,6 +27,22 @@ bbox = (-77.8, 37.5, -74.0, 44.0)
 dates = ('1950-01-01', '2022-12-31')
 
 
+
+### 0.1: Request and save specific pywrdrb gauge flows
+## Get historic observations that exist (including management)
+pywrdrb_stations = []
+for node, sites in obs_site_matches.items():
+    if sites:
+        for s in sites:
+            pywrdrb_stations.append(s)
+
+nwis = NWIS()
+Q_pywrdrb = nwis.get_streamflow(pywrdrb_stations, dates)
+Q_pywrdrb.index = pd.to_datetime(Q_pywrdrb.index.date)
+Q_pywrdrb.to_csv('./outputs/streamflow_daily_usgs_1950_2022_cms.csv', sep=',')
+
+
+
 ### 1: Query USGS data ###
 # Use the national water info system (NWIS)
 nwis = NWIS()

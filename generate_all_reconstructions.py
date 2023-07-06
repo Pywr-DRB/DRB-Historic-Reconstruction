@@ -30,16 +30,16 @@ if __name__ == '__main__':
                                 donor_fdc= fdc_source, K=K_knn, 
                                 regression_nhm_inflow_scaling= True,
                                 remove_mainstem_gauges=remove_mainstem_gauges)   
-        
-    fdc_source = 'nhmv10'
-    if generate_ensembles:
-        
-        print(f'Generating ensemble of size {n_ensemble_samples} with {fdc_source} based FDCs at PUB locations.')
-        # Without NYC scaling; NYC scaling does not change across reals and can be pulled from single trace variations    
-        generate_reconstruction(start_year=start_year, end_year=end_year,
-                                N_REALIZATIONS= n_ensemble_samples,
-                                donor_fdc= 'nhmv10', K=10, 
-                                regression_nhm_inflow_scaling= False,
-                                remove_mainstem_gauges=remove_mainstem_gauges)   
+            
+        # Create an ensemble of reconstructions using QPPQ sampling from KNN gauges
+        if generate_ensembles:
+                
+                print(f'Generating ensemble of size {n_ensemble_samples} with {fdc_source} based FDCs at PUB locations.')
+                #Without NYC scaling; NYC scaling does not change across reals and can be pulled from single trace variations                    
+                generate_reconstruction(start_year=start_year, end_year=end_year,
+                                        N_REALIZATIONS= n_ensemble_samples,
+                                        donor_fdc= fdc_source, K=10, 
+                                        regression_nhm_inflow_scaling= False,
+                                        remove_mainstem_gauges=remove_mainstem_gauges)   
 
 print('Done! Go to reconstruction_diagnostics.ipynb to see the result.')
