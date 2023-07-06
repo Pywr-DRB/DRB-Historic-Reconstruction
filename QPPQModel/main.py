@@ -39,15 +39,18 @@ class StreamflowGenerator():
         
         ## Handle **kwargs
         # Check if an invalid kwarg was provided
-        self.valid_kwargs = ['square_IDW', 'return_all', 'probabalistic_sample', 'fdc_quantiles', 'remove_zero_flow']
+        self.valid_kwargs = ['square_IDW', 'return_all', 'probabalistic_sample',
+                             'log_fdc_interpolation', 
+                             'fdc_quantiles', 'remove_zero_flow']
         for kwarg in kwargs.keys():
             if kwarg not in self.valid_kwargs:
                 raise Exception(f'{kwarg} is not a valid key. Valid keys: {self.valid_kwargs}')
 
         # Substitute default values
-        default_quantiles = [0.0003, 0.005, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.93, 0.95, 0.97, 0.995, 0.9997]
-
+        default_quantiles = np.linspace(0.00001, 0.99999, 200)
+        
         self.square_IDW = kwargs.get('square_IDW', True)
+        self.log_fdc_interpolation = kwargs.get('log_fdc_interpolation', False)
         self.return_all = kwargs.get('return_all', False)
         self.qs = kwargs.get('fdc_quantiles', default_quantiles)
         self.probabalistic_sample = kwargs.get('probabalistic_sample', False)
@@ -66,11 +69,14 @@ class StreamflowGenerator():
 
     def streamflow_to_nonexceedance(self, Q):
         # Get historic FDC
-        fdc_quantiles = np.linspace(0,1,200)
-        fdc = np.quantile(Q, fdc_quantiles)
-        
+        if self.log_fdc_interpolation:
+            fdc = np.quantile(np.log(Q), self.qs)
+            Q = np.log(Q)
+        else:
+            fdc = np.quantile(Q, self.qs)
+    
         # Translate flow to NEP
-        nep = np.interp(Q, fdc, fdc_quantiles, right = self.qs[-1] + 0.0000001, left = self.qs[0]-0.000001)
+        nep = np.interp(Q, fdc, self.qs, right = self.qs[-1] + 0.0000001, left = self.qs[0]-0.000001)
         return nep
 
     def nonexceedance_to_streamflow(self, nep_timeseries):
@@ -80,6 +86,7 @@ class StreamflowGenerator():
         bound_percentage = 0.1
         high_flow_bound = np.random.uniform(self.predicted_fdc[-1], 
                                             self.predicted_fdc[-1] + bound_percentage*self.predicted_fdc[-1])
+        
         low_flow_bound = np.random.uniform(self.predicted_fdc[0] - bound_percentage*self.predicted_fdc[0], 
                                            self.predicted_fdc[-0])
         Q = np.interp(nep_timeseries, self.qs, self.predicted_fdc, right = high_flow_bound, left = low_flow_bound)
@@ -106,6 +113,10 @@ class StreamflowGenerator():
         ### Handle prediction specific inputs
         self.prediction_location, self.predicted_fdc = args
 
+        # Change FDC to log
+        if self.log_fdc_interpolation:
+            self.predicted_fdc = np.log(self.predicted_fdc)
+            
         prediction_kwargs = ['start_date', 'end_date']        
         for k in kwargs.keys():
             if k not in prediction_kwargs:
@@ -163,6 +174,10 @@ class StreamflowGenerator():
 
             ## Convert from NEP to flow
             self.predicted_flow = self.nonexceedance_to_streamflow(self.predicted_nep_timeseries)        
+        
+        # Convert log-flow to flow if needed
+        if self.log_fdc_interpolation:
+            self.predicted_flow = np.exp(self.predicted_flow)
         
         self.predicted_streamflow = pd.DataFrame(self.predicted_flow, index = self.Qobs.index)
         return self.predicted_streamflow
