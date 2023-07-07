@@ -7,6 +7,7 @@ import sys
 import datetime as dt
 import seaborn as sns
 import h5py
+import shutil
 
 # Import the QPPQ model
 from QPPQModel import StreamflowGenerator
@@ -167,8 +168,8 @@ def generate_reconstruction(start_year, end_year,
         for i, dates in enumerate(daterange_subsets):
             # Run predictions one location at a time
             for node, sites in obs_pub_site_matches.items():
-                
                 # Pull gauges that have flow during daterange
+                dates = [str(d) for d in dates]
                 Q_subset = Q.loc[dates[0]:dates[1], :].dropna(axis=1)
                 subset_sites = [f'{i.split("-")[1]}' for i in Q_subset.columns]
                 gauge_meta_subset = gauge_meta.loc[subset_sites, :]
@@ -264,10 +265,13 @@ def generate_reconstruction(start_year, end_year,
 
     if N_REALIZATIONS == 1:
         Q_reconstructed.to_csv(f'./outputs/{output_filename}_mgd.csv', sep = ',')
-        Q_reconstructed.to_csv(f'{pywrdrb_directory}/input_data/modeled_gages/{output_filename}_mgd.csv', sep = ',')
+        shutil.copyfile(f'./outputs/{output_filename}_mgd.csv', 
+                        f'{pywrdrb_directory}/input_data/modeled_gages/{output_filename}_mgd.csv')
     elif N_REALIZATIONS > 1:
         output_filename = f'./outputs/ensembles/{output_filename}_ensemble_mgd.hdf5'
         export_dict_ensemble_to_hdf5(ensemble_Q_reconstructed, output_filename)
+        shutil.copyfile(f'./outputs/ensembles/{output_filename}_ensemble_mgd.hdf5',
+                        f'{pywrdrb_directory}/input_data/historic_ensembles/{output_filename}_ensemble_mgd.hdf5')
 
     return
 
