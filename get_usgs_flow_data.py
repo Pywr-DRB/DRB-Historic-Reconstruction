@@ -39,10 +39,17 @@ for node, sites in obs_site_matches.items():
 nwis = NWIS()
 Q_pywrdrb = nwis.get_streamflow(pywrdrb_stations, dates)
 Q_pywrdrb.index = pd.to_datetime(Q_pywrdrb.index.date)
+
+for s in pywrdrb_stations:
+    assert(f'USGS-{s}' in Q_pywrdrb.columns),'PywrDRB gauge {s} is missing from the data.'
+
+# Export
 Q_pywrdrb.to_csv('./outputs/streamflow_daily_usgs_1950_2022_cms.csv', sep=',')
+Q_pywrdrb.to_csv(f'{pywrdrb_dir}/input_data/usgs_gages/streamflow_daily_usgs_1950_2022_cms.csv', sep=',')
 
 
-
+### Unmanaged flows: For the prediction at ungauged or managed locations
+### we want only unmanaged flow data.  The following retrieves, filters, and exports unmanaged flows across the basin. 
 ### 1: Query USGS data ###
 # Use the national water info system (NWIS)
 nwis = NWIS()
