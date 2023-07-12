@@ -61,7 +61,7 @@ def generate_reconstruction(start_year, end_year,
 
     # Set output name based on specs
     output_filename = f'historic_reconstruction_daily_{donor_fdc}'
-    output_filename = f'{output_filename}_NYCscaled' if regression_nhm_inflow_scaling else output_filename
+    output_filename = f'{output_filename}_NYCScaled' if regression_nhm_inflow_scaling else output_filename
 
     # Constants
     cms_to_mgd = 22.82
