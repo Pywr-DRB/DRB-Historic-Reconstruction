@@ -39,7 +39,7 @@ if __name__ == '__main__':
                 generate_reconstruction(start_year=start_year, end_year=end_year,
                                         N_REALIZATIONS= n_ensemble_samples,
                                         donor_fdc= fdc_source, K=10, 
-                                        regression_nhm_inflow_scaling= False,
+                                        regression_nhm_inflow_scaling= True,
                                         remove_mainstem_gauges=remove_mainstem_gauges)   
 
 print('Done! Go to reconstruction_diagnostics.ipynb to see the result.')

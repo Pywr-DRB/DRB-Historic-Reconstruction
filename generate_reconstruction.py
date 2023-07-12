@@ -268,8 +268,7 @@ def generate_reconstruction(start_year, end_year,
         shutil.copyfile(f'./outputs/{output_filename}_mgd.csv', 
                         f'{pywrdrb_directory}/input_data/modeled_gages/{output_filename}_mgd.csv')
     elif N_REALIZATIONS > 1:
-        output_filename = f'./outputs/ensembles/{output_filename}_ensemble_mgd.hdf5'
-        export_dict_ensemble_to_hdf5(ensemble_Q_reconstructed, output_filename)
+        export_dict_ensemble_to_hdf5(ensemble_Q_reconstructed, output_file= f'./outputs/ensembles/{output_filename}_ensemble_mgd.hdf5')
         shutil.copyfile(f'./outputs/ensembles/{output_filename}_ensemble_mgd.hdf5',
                         f'{pywrdrb_directory}/input_data/historic_ensembles/{output_filename}_ensemble_mgd.hdf5')
 
