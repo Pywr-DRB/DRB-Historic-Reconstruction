@@ -83,7 +83,7 @@ class StreamflowGenerator():
         
         # The bound_percentage will determine how much (+/- %) random flow 
         # is sampled when NEP > fdc_quantiles[-1] or NEP < fdc_quantiles[0] 
-        bound_percentage = 0.1
+        bound_percentage = 0.01
         high_flow_bound = np.random.uniform(self.predicted_fdc[-1], 
                                             self.predicted_fdc[-1] + bound_percentage*self.predicted_fdc[-1])
         

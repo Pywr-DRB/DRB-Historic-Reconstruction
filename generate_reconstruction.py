@@ -97,7 +97,7 @@ def generate_reconstruction(start_year, end_year,
 
     for i, node in enumerate(prediction_locations.index):    
         node_fdcs.loc[node, :] = np.quantile(fdc_donor_flow.loc[:,node], fdc_quantiles)
-            
+
     # Remove outflow gauges from flow data
     for node, sites in obs_pub_site_matches.items():
         if f'USGS-{node}' in Q.columns:
@@ -116,6 +116,8 @@ def generate_reconstruction(start_year, end_year,
         obs_pub_site_matches['delTrenton'] = None
         obs_pub_site_matches['delDRCanal'] = None
         obs_pub_site_matches['delMontague'] = None
+
+
 
     # Make sure other inflow gauges are in the dataset
     missing = 0
@@ -253,7 +255,7 @@ def generate_reconstruction(start_year, end_year,
                         Q_reconstructed.loc[Q_reconstructed.index.month==m, site] = Q_reconstructed.loc[Q_reconstructed.index.month==m, site] * month_scaling_coefs[site]
                         
         assert(Q_reconstructed.isna().sum().sum() == 0), ' There are NAs in the reconstruction'
-        
+
         ensemble_Q_reconstructed[f'realization_{real}'] = Q_reconstructed.copy()
 
 
