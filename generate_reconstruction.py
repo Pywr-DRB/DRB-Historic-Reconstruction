@@ -105,19 +105,14 @@ def generate_reconstruction(start_year, end_year,
             Q = Q.drop(f'USGS-{node}', axis=1)
 
     # Remove Trenton mainstem gauge
+    mainstem_nodes= ['delMontague', 'delTrenton', 'delDRCanal', 'delLordville', 'outletAssunpink', 'outletSchuylkill']
     if remove_mainstem_gauges:
-        if f'USGS-{obs_pub_site_matches["delTrenton"]}' in Q.columns:
-            print(f'Removing Trenton gauge from data.')
-            Q = Q.drop(f'USGS-{obs_pub_site_matches["delTrenton"]}', axis=1)
-        if f'USGS-{obs_pub_site_matches["delMontague"]}' in Q.columns:
-            print(f'Removing Montague gauge from data.')
-            Q = Q.drop(f'USGS-{obs_pub_site_matches["delMontague"]}', axis=1)
-
-        obs_pub_site_matches['delTrenton'] = None
-        obs_pub_site_matches['delDRCanal'] = None
-        obs_pub_site_matches['delMontague'] = None
-
-
+        for node in mainstem_nodes:
+            if f'USGS-{obs_pub_site_matches[node]}' in Q.columns:
+                print(f'Removing Trenton gauge from data.')
+                Q = Q.drop(f'USGS-{obs_pub_site_matches[node]}', axis=1)
+    
+            obs_pub_site_matches[node] = None
 
     # Make sure other inflow gauges are in the dataset
     missing = 0
