@@ -34,8 +34,7 @@ if __name__ == '__main__':
         # Create an ensemble of reconstructions using QPPQ sampling from KNN gauges
         if generate_ensembles:
                 
-                print(f'Generating ensemble of size {n_ensemble_samples} with {fdc_source} based FDCs at PUB locations.')
-                #Without NYC scaling; NYC scaling does not change across reals and can be pulled from single trace variations                    
+                print(f'Generating ensemble of size {n_ensemble_samples} with {fdc_source} based FDCs at PUB locations.')                 
                 generate_reconstruction(start_year=start_year, end_year=end_year,
                                         N_REALIZATIONS= n_ensemble_samples,
                                         donor_fdc= fdc_source, K=10, 
