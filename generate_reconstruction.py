@@ -20,7 +20,7 @@ from utils.inflow_scaling_regression import get_quarter
 pywrdrb_directory = '../Pywr-DRB/'
 sys.path.append(pywrdrb_directory)
 
-from pywrdrb.pywr_drb_node_data import obs_pub_site_matches
+from pywrdrb.pywr_drb_node_data import obs_pub_site_matches, obs_site_matches
 
 
 def generate_reconstruction(start_year, end_year, 
@@ -88,15 +88,18 @@ def generate_reconstruction(start_year, end_year,
     elif donor_fdc == 'nwmv21':
         fdc_donor_flow = nwm_flow
         # NWM has a few 0s that need to be replaced
-        for col in fdc_donor_flow.columns:
-            min_positive = fdc_donor_flow.loc[fdc_donor_flow[col] > 0, col].min()
-            fdc_donor_flow[col]= np.where(fdc_donor_flow[col]==0, min_positive, fdc_donor_flow[col])
+        # for col in fdc_donor_flow.columns:
+            # min_positive = fdc_donor_flow.loc[fdc_donor_flow[col] > 0, col].min()
+            # fdc_donor_flow[col]= np.where(fdc_donor_flow[col]==0, min_positive, fdc_donor_flow[col])
     else:
         print('Invalid donor_fdc specification. Options: nhmv10, nwmv21')
         return
 
+    # Calculate FDC values using donor model flow (NHM or NWM)
     for i, node in enumerate(prediction_locations.index):    
-        node_fdcs.loc[node, :] = np.quantile(fdc_donor_flow.loc[:,node], fdc_quantiles)
+        nonzero_flow= fdc_donor_flow.loc[:,node].values
+        nonzero_flow= nonzero_flow[nonzero_flow != 0.0]
+        node_fdcs.loc[node, :] = np.quantile(nonzero_flow, fdc_quantiles)
 
     # Remove outflow gauges from flow data
     for node, sites in obs_pub_site_matches.items():
@@ -108,9 +111,9 @@ def generate_reconstruction(start_year, end_year,
     mainstem_nodes= ['delMontague', 'delTrenton', 'delDRCanal', 'delLordville', 'outletAssunpink', 'outletSchuylkill']
     if remove_mainstem_gauges:
         for node in mainstem_nodes:
-            if f'USGS-{obs_pub_site_matches[node]}' in Q.columns:
-                print(f'Removing Trenton gauge from data.')
-                Q = Q.drop(f'USGS-{obs_pub_site_matches[node]}', axis=1)
+            if f'USGS-{obs_site_matches[node][0]}' in Q.columns:
+                print(f'Removing {node} gauge from data.')
+                Q = Q.drop(f'USGS-{obs_site_matches[node][0]}', axis=1)
     
             obs_pub_site_matches[node] = None
 
