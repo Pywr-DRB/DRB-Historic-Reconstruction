@@ -12,7 +12,7 @@ import shutil
 # Import the QPPQ model
 from QPPQModel import StreamflowGenerator
 
-from utils.data_processing import export_dict_ensemble_to_hdf5
+from utils.data_processing import export_ensemble_to_hdf5
 from utils.inflow_scaling_regression import train_inflow_scale_regression_models, predict_inflow_scaling
 from utils.inflow_scaling_regression import get_quarter
 
@@ -311,9 +311,10 @@ def generate_reconstruction(start_year, end_year,
         Q_reconstructed_gage_flows = add_upstream_catchment_inflows(Q_reconstructed_catchment_inflows.copy())
 
         ## Store realization data
-        ensemble_Q_reconstructed_catchment_inflows[f'realization_{real}'] = Q_reconstructed_catchment_inflows.copy()
-        ensemble_Q_reconstructed_gage_flows[f'realization_{real}'] = Q_reconstructed_gage_flows.copy()
-
+        # We want ensemble data to be grouped by node, not by realization
+        for node, sites in obs_pub_site_matches.items():
+            ensemble_Q_reconstructed_catchment_inflows[node][f'realization_{real}'] = Q_reconstructed_catchment_inflows[node].values
+            ensemble_Q_reconstructed_gage_flows[node][f'realization_{real}'] = Q_reconstructed_gage_flows[node].values
     
 
     ##############
@@ -334,13 +335,25 @@ def generate_reconstruction(start_year, end_year,
                         f'{pywrdrb_directory}/input_data/gage_flow_{dataset_name}.csv')
         
     elif N_REALIZATIONS > 1:
+        
+        # Convert to dataframes
+        df_ensemble_catchment_inflows = {}
+        df_ensemble_gage_flows = {}
+        for node, sites in obs_pub_site_matches.items():
+            df_ensemble_catchment_inflows[node] = pd.DataFrame(ensemble_Q_reconstructed_catchment_inflows[node],
+                                                        columns= list(ensemble_Q_reconstructed_catchment_inflows.keys()),
+                                                        index = pd.to_datetime(Q_reconstructed.index))
+            df_ensemble_gage_flows[node] = pd.DataFrame(ensemble_Q_reconstructed_gage_flows[node],
+                                                columns=list(ensemble_Q_reconstructed_gage_flows[node].keys()),
+                                                index = pd.to_datetime(Q_reconstructed.index))
+        
         # Catchment inflows
-        export_dict_ensemble_to_hdf5(ensemble_Q_reconstructed_catchment_inflows, output_file= f'./outputs/ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5')
+        export_ensemble_to_hdf5(df_ensemble_catchment_inflows, output_file= f'./outputs/ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5')
         shutil.copyfile(f'./outputs/ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5',
                         f'{pywrdrb_directory}/input_data/historic_ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5')
 
         # Gage flows
-        export_dict_ensemble_to_hdf5(ensemble_Q_reconstructed_gage_flows, output_file= f'./outputs/ensembles/gage_flow_{dataset_name}_ensemble.hdf5')
+        export_ensemble_to_hdf5(df_ensemble_gage_flows, output_file= f'./outputs/ensembles/gage_flow_{dataset_name}_ensemble.hdf5')
         shutil.copyfile(f'./outputs/ensembles/gage_flow_{dataset_name}_ensemble.hdf5',
                         f'{pywrdrb_directory}/input_data/historic_ensembles/gage_flow_{dataset_name}_ensemble.hdf5')
 

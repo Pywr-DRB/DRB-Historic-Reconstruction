@@ -2,17 +2,20 @@ import h5py
 import pandas as pd
 
 
-def export_dict_ensemble_to_hdf5(dict, output_file):
+
+def export_ensemble_to_hdf5(dict, output_file):
+    
+    dict_keys = list(dict.keys())
     N = len(dict)
-    T, M = dict[f'realization_0'].shape
-    column_labels = dict[f'realization_0'].columns.to_list()
+    T, M = dict[dict_keys[0]].shape
+    column_labels = dict[dict_keys[0]].columns.to_list()
     
     with h5py.File(output_file, 'w') as f:
-        for i in range(N):
-            data = dict[f'realization_{i}']
+        for key in dict_keys:
+            data = dict[key]
             datetime = data.index.astype(str).tolist() #.strftime('%Y-%m-%d').tolist()
             
-            grp = f.create_group(f"realization_{i+1}")
+            grp = f.create_group(key)
                     
             # Store column labels as an attribute
             grp.attrs['column_labels'] = column_labels
@@ -20,9 +23,12 @@ def export_dict_ensemble_to_hdf5(dict, output_file):
             # Create dataset for dates
             grp.create_dataset('date', data=datetime)
             
-            # Create datasets for each location's timeseries
+            # Create datasets for each array subset from the group
             for j in range(M):
-                dataset = grp.create_dataset(column_labels[j], data=data[column_labels[j]].to_list())
+                dataset = grp.create_dataset(column_labels[j], 
+                                             data=data[column_labels[j]].to_list())
+    return
+
 
 
 def extract_realization_from_hdf5(hdf5_file, realization):
