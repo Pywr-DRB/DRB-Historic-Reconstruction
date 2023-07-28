@@ -156,8 +156,17 @@ class StreamflowGenerator():
             # Probabilitically sample one of the K locations
             sample_site_id = np.random.choice(self.KNN_site_ids, p=self.norm_wts)
             
+            # Find the flow timeseries from the sampled site
+            donor_flow_timeseries = self.Qobs.loc[:, sample_site_id].values
+            
+            # Replace zeros and/or nans with nearest non-zero value
+            donor_flow_timeseries[donor_flow_timeseries <= 0] = np.nan
+            donor_flow_timeseries = pd.Series(donor_flow_timeseries).interpolate(method='nearest').values
+            
             # Find the NEP timeseries from the sampled site
-            self.observed_nep_timeseries = self.streamflow_to_nonexceedance(self.Qobs.loc[:, sample_site_id].values)
+            self.observed_nep_timeseries = self.streamflow_to_nonexceedance(donor_flow_timeseries)
+            self.observed_nep_timeseries[self.observed_nep_timeseries <= 0] = np.nan
+            self.observed_nep_timeseries = pd.Series(self.observed_nep_timeseries).interpolate(method='nearest').values
             
             # Convert NEP to flow timeseries
             self.predicted_flow = self.nonexceedance_to_streamflow(self.observed_nep_timeseries)

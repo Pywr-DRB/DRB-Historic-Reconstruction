@@ -17,12 +17,12 @@ if __name__ == '__main__':
     
     for fdc_source in ['nhmv10', 'nwmv21']:
         print(f'Generating {fdc_source}-FDC based reconstructions.')
-        # # Without NYC scaling
-        # generate_reconstruction(start_year=start_year, end_year=end_year,
-        #                         N_REALIZATIONS=1,
-        #                         donor_fdc= fdc_source, K=K_knn,
-        #                         regression_nhm_inflow_scaling= False,
-        #                         remove_mainstem_gauges=remove_mainstem_gauges)
+        # Without NYC scaling
+        generate_reconstruction(start_year=start_year, end_year=end_year,
+                                N_REALIZATIONS=1,
+                                donor_fdc= fdc_source, K=K_knn,
+                                regression_nhm_inflow_scaling= False,
+                                remove_mainstem_gauges=remove_mainstem_gauges)
 
         # With NYC scaling
         generate_reconstruction(start_year=start_year, end_year=end_year,
