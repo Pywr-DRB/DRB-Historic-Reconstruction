@@ -188,6 +188,9 @@ def generate_reconstruction(start_year, end_year,
     Q_reconstructed = pd.DataFrame(index=max_daterange, columns = reconstructed_sites)
     ensemble_Q_reconstructed_catchment_inflows = {}
     ensemble_Q_reconstructed_gage_flows = {}
+    for node, sites in obs_pub_site_matches.items():
+        ensemble_Q_reconstructed_catchment_inflows[node] = {}
+        ensemble_Q_reconstructed_gage_flows[node] = {}
 
     # Partition the date range into yearly subsets (this can be improved, to allow non-complete years)
     N_YEARS = int(np.floor(len(max_daterange)/365))
@@ -341,7 +344,7 @@ def generate_reconstruction(start_year, end_year,
         df_ensemble_gage_flows = {}
         for node, sites in obs_pub_site_matches.items():
             df_ensemble_catchment_inflows[node] = pd.DataFrame(ensemble_Q_reconstructed_catchment_inflows[node],
-                                                        columns= list(ensemble_Q_reconstructed_catchment_inflows.keys()),
+                                                        columns= list(ensemble_Q_reconstructed_catchment_inflows[node].keys()),
                                                         index = pd.to_datetime(Q_reconstructed.index))
             df_ensemble_gage_flows[node] = pd.DataFrame(ensemble_Q_reconstructed_gage_flows[node],
                                                 columns=list(ensemble_Q_reconstructed_gage_flows[node].keys()),
