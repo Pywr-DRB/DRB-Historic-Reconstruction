@@ -15,6 +15,7 @@ from QPPQModel import StreamflowGenerator
 from utils.data_processing import export_ensemble_to_hdf5
 from utils.inflow_scaling_regression import train_inflow_scale_regression_models, predict_inflow_scaling
 from utils.inflow_scaling_regression import get_quarter, prep_inflow_scaling_data
+from utils.inflow_scaling_regression import nhm_scaled_reservoirs
 
 # Directory to pywrdrb project
 pywrdrb_directory = '../Pywr-DRB/'
@@ -107,7 +108,6 @@ def generate_reconstruction(start_year, end_year,
     log_fdc_interpolation = True            # Keep True. If the QPPQ should be done using log-transformed FDC 
 
     # NHM scaling
-    nhm_scaled_reservoirs = ['cannonsville', 'pepacton', 'fewalter', 'beltzvilleCombined']
     nhm_scaling_roll_window = 3
 
     # Set output name based on specs

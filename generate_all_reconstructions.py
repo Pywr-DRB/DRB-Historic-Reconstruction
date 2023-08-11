@@ -6,7 +6,7 @@ from generate_reconstruction import generate_reconstruction
 
 if __name__ == '__main__':
 
-    generate_ensembles= True
+    generate_ensembles= False
     n_ensemble_samples= 30
 
     # Constants across variations
