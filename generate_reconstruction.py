@@ -14,7 +14,7 @@ from QPPQModel import StreamflowGenerator
 
 from utils.data_processing import export_ensemble_to_hdf5
 from utils.inflow_scaling_regression import train_inflow_scale_regression_models, predict_inflow_scaling
-from utils.inflow_scaling_regression import get_quarter
+from utils.inflow_scaling_regression import get_quarter, prep_inflow_scaling_data
 
 # Directory to pywrdrb project
 pywrdrb_directory = '../Pywr-DRB/'
@@ -106,6 +106,10 @@ def generate_reconstruction(start_year, end_year,
     max_annual_NA_fill = 10                 # Amount of data allowed to be missing in 1 year for that year to be used.
     log_fdc_interpolation = True            # Keep True. If the QPPQ should be done using log-transformed FDC 
 
+    # NHM scaling
+    nhm_scaled_reservoirs = ['cannonsville', 'pepacton', 'fewalter', 'beltzvilleCombined']
+    nhm_scaling_roll_window = 3
+
     # Set output name based on specs
     dataset_name = f'obs_pub_{donor_fdc}_NYCScaled' if regression_nhm_inflow_scaling else f'obs_pub_{donor_fdc}'
 
@@ -121,8 +125,7 @@ def generate_reconstruction(start_year, end_year,
     nwm_gauge_flow = pd.read_csv(f'{pywrdrb_directory}/input_data/gage_flow_nwmv21.csv', sep =',',  index_col = 0, parse_dates=True)
     nwm_inflow = pd.read_csv(f'{pywrdrb_directory}/input_data/catchment_inflow_nwmv21.csv', sep =',',  index_col = 0, parse_dates=True)
     
-    nyc_nhm_inflows = pd.read_csv('./data/nyc_inflow_nhm_streamflow.csv', sep = ',', index_col = 0, parse_dates=True)
-
+    
     prediction_locations = pd.read_csv(f'./data/prediction_locations.csv', sep = ',', index_col=0)
     gauge_meta = pd.read_csv(f'./data/drb_unmanaged_usgs_metadata.csv', sep = ',', dtype = {'site_no':str})
     gauge_meta.set_index('site_no', inplace=True)
@@ -204,9 +207,13 @@ def generate_reconstruction(start_year, end_year,
     if regression_nhm_inflow_scaling:
         linear_models = {}
         linear_results = {}
-        for reservoir in ['cannonsville', 'pepacton']:
-            linear_models[reservoir], linear_results[reservoir] = train_inflow_scale_regression_models(reservoir, 
-                                                                                                    nyc_nhm_inflows)
+        for reservoir in nhm_scaled_reservoirs:
+            scaling_training_flows = prep_inflow_scaling_data()
+            linear_models[reservoir], linear_results[reservoir] = train_inflow_scale_regression_models(reservoir,
+                                                                                                    scaling_training_flows,
+                                                                                                    dataset='nhmv10',
+                                                                                                    rolling=True,
+                                                                                                    window=nhm_scaling_roll_window)
             
     ## QPPQ prediction
     # Generate 1 year at a time, to maximize the amount of data available for each years QPPQ
@@ -280,21 +287,22 @@ def generate_reconstruction(start_year, end_year,
 
         ### Apply NHM scaling at Cannonsville and Pepacton (Optional)
         if regression_nhm_inflow_scaling:
-            for node in ['cannonsville', 'pepacton']:
+            for node in nhm_scaled_reservoirs:
                 unscaled_inflows = Q_reconstructed.loc[:, obs_pub_site_matches[node]]
                         
                 # Use linear regression to find inflow scaling coefficient
-                # Different models are used fore each quarter; done by month batches
+                # Different models are used for each quarter; done by month batches
                 for m in range(1,13):
                     quarter = get_quarter(m)
                     unscaled_month_inflows = unscaled_inflows.loc[unscaled_inflows.index.month == m, :].sum(axis=1)
-                    unscaled_month_log_inflows = np.log(unscaled_month_inflows.astype('float64'))
+                    rolling_unscaled_month_inflows = unscaled_month_inflows.rolling(window=nhm_scaling_roll_window, 
+                                                                                    min_periods=1).mean()
+                    rolling_unscaled_month_log_inflows = np.log(rolling_unscaled_month_inflows.astype('float64'))
                     
-                    month_scaling_coefs = predict_inflow_scaling(linear_models[node][quarter], 
-                                                linear_results[node][quarter], 
-                                                log_flow= unscaled_month_log_inflows,
-                                                method = 'regression')
                     
+                    month_scaling_coefs = predict_inflow_scaling(linear_results[node][quarter], 
+                                                                log_flow= rolling_unscaled_month_log_inflows)
+                                    
                     ## Apply scaling across gauges for full month batch 
                     # Match column names to map to df
                     for site in obs_pub_site_matches[node]:
