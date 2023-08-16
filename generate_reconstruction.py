@@ -111,7 +111,7 @@ def generate_reconstruction(start_year, end_year,
     nhm_scaling_roll_window = 3
 
     # Set output name based on specs
-    dataset_name = f'obs_pub_{donor_fdc}_NYCScaled' if regression_nhm_inflow_scaling else f'obs_pub_{donor_fdc}'
+    dataset_name = f'obs_pub_{donor_fdc}_ObsScaled' if regression_nhm_inflow_scaling else f'obs_pub_{donor_fdc}'
 
     # Constants
     cms_to_mgd = 22.82
