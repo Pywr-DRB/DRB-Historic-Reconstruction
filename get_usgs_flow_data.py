@@ -13,19 +13,15 @@ import geopandas as gpd
 from pygeohydro import NWIS
 import pynhd as pynhd
 
-from utils.filter import filter_drb_sites
-
 ## Import latest pywrdrb node data specs
-pywrdrb_dir = '../Pywr-DRB/'
-sys.path.append(pywrdrb_dir)
-from pywrdrb.pywr_drb_node_data import obs_site_matches, obs_pub_site_matches
-
+from methods.generator.pywr_drb_node_data import obs_site_matches, obs_pub_site_matches
+from methods.processing.filter import filter_drb_sites
 
 ### 0: Specifications ###
 filter_drb = True
 bbox = (-77.8, 37.5, -74.0, 44.0)
-dates = ('1950-01-01', '2022-12-31')
-
+dates = ('1900-01-01', '2022-12-31')
+pywrdrb_dir = '../Pywr-DRB/'
 
 
 ### 0.1: Request and save specific pywrdrb gauge flows

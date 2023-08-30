@@ -1,7 +1,7 @@
 """Run all variations of historic reconstruction.
 """
 
-from generate_reconstruction import generate_reconstruction
+from methods.generator import generate_reconstruction
 
 
 if __name__ == '__main__':
