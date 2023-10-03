@@ -15,17 +15,10 @@ from .QPPQModel import StreamflowGenerator
 from methods.processing.hdf5 import export_ensemble_to_hdf5
 from methods.generator.inflow_scaling_regression import train_inflow_scale_regression_models, predict_inflow_scaling
 from methods.generator.inflow_scaling_regression import get_quarter, prep_inflow_scaling_data
-from methods.generator.inflow_scaling_regression import nhm_scaled_reservoirs
+from methods.generator.inflow_scaling_regression import nhmv10_scaled_reservoirs, nwmv21_scaled_reservoirs
+from methods.utils import data_dir, output_dir, fig_dir, pywrdrb_dir
 
 from .pywr_drb_node_data import obs_pub_site_matches, obs_site_matches, upstream_nodes_dict, downstream_node_lags
-
-## Directories - relative to root directory
-# Directory to input and output folders
-input_directory = './data/'
-output_directory = './outputs/'
-
-# Directory to pywrdrb project
-pywrdrb_directory = '../Pywr-DRB/'
 
 
 reservoir_list = ['cannonsville', 'pepacton', 'neversink', 'wallenpaupack', 'prompton', 'shoholaMarsh', \
@@ -80,10 +73,10 @@ def add_upstream_catchment_inflows(inflows):
 ### main ###
 def generate_reconstruction(start_year, end_year, 
                         N_REALIZATIONS= 1, donor_fdc= 'nhmv10', 
-                        K = 5, regression_nhm_inflow_scaling= False, 
+                        K = 5, inflow_scaling_regression= False, 
                         remove_mainstem_gauges= True,
-                        input_directory= input_directory,
-                        output_directory= output_directory,
+                        input_directory= data_dir,
+                        output_directory= output_dir,
                         debugging= False):
     """Generates reconstructions of historic naturalized flows across the DRB. 
     
@@ -100,7 +93,7 @@ def generate_reconstruction(start_year, end_year,
         N_REALIZATIONS (int, optional): Set as 1 to generate single QPPQ aggregate timeseries. Increase to generate N samples of QPPQ-KNN sampled timeseries. Defaults to 1.
         donor_fdc (str, optional): Options: 'nwmv21','nhmv10'.  FDCs are derived from donor_fdc modeled streamflows, used to generate unguaged/managed flows. Defaults to 'nhmv10'.
         K (int, optional): Number of KNN gauges to use in QPPQ. Defaults to 5.
-        regression_nhm_inflow_scaling (bool, optional): If True, Cannonsville and Pepacton inflows will be scaled to estimate total HRU flow using NHM-based regression. Defaults to False.
+        inflow_scaling_regression (bool, optional): If True, Cannonsville and Pepacton inflows will be scaled to estimate total HRU flow using NHM-based regression. Defaults to False.
         remove_mainstem_gauges (bool, optional): If True, the Trenton and Montague gauges are removed from observed dataset, and QPPQ is used. Defaults to True.
         debugging (bool, optional): To toggle print statements. Defaults to False.
     """
@@ -116,23 +109,25 @@ def generate_reconstruction(start_year, end_year,
     max_annual_NA_fill = 10                 # Amount of data allowed to be missing in 1 year for that year to be used.
     log_fdc_interpolation = True            # Keep True. If the QPPQ should be done using log-transformed FDC 
 
-    # NHM scaling
-    nhm_scaling_roll_window = 3
+    # Inflow scaling specifications
+    scaling_rolling_window = 3
+    scaled_reservoirs = nhmv10_scaled_reservoirs if donor_fdc == 'nhmv10' else nwmv21_scaled_reservoirs
 
     # Set output name based on specs
-    dataset_name = f'obs_pub_{donor_fdc}_ObsScaled' if regression_nhm_inflow_scaling else f'obs_pub_{donor_fdc}'
+    dataset_name = f'obs_pub_{donor_fdc}_ObsScaled' if inflow_scaling_regression else f'obs_pub_{donor_fdc}'
 
     # Constants
     cms_to_mgd = 22.82
     fdc_quantiles = np.linspace(0.00001, 0.99999, 200)
 
     ### Load data 
+
     Q = pd.read_csv(f'{input_directory}historic_unmanaged_streamflow_1900_2023_cms.csv', sep = ',', index_col = 0, parse_dates=True)*cms_to_mgd
-    nhm_gauge_flow = pd.read_csv(f'{pywrdrb_directory}/input_data/gage_flow_nhmv10.csv', sep =',',  index_col = 0, parse_dates=True)
-    nhm_inflow = pd.read_csv(f'{pywrdrb_directory}/input_data/catchment_inflow_nhmv10.csv', sep =',',  index_col = 0, parse_dates=True)
+    nhm_gauge_flow = pd.read_csv(f'{pywrdrb_dir}/input_data/gage_flow_nhmv10.csv', sep =',',  index_col = 0, parse_dates=True)
+    nhm_inflow = pd.read_csv(f'{pywrdrb_dir}/input_data/catchment_inflow_nhmv10.csv', sep =',',  index_col = 0, parse_dates=True)
     
-    nwm_gauge_flow = pd.read_csv(f'{pywrdrb_directory}/input_data/gage_flow_nwmv21.csv', sep =',',  index_col = 0, parse_dates=True)
-    nwm_inflow = pd.read_csv(f'{pywrdrb_directory}/input_data/catchment_inflow_nwmv21.csv', sep =',',  index_col = 0, parse_dates=True)
+    nwm_gauge_flow = pd.read_csv(f'{pywrdrb_dir}/input_data/gage_flow_nwmv21.csv', sep =',',  index_col = 0, parse_dates=True)
+    nwm_inflow = pd.read_csv(f'{pywrdrb_dir}/input_data/catchment_inflow_nwmv21.csv', sep =',',  index_col = 0, parse_dates=True)
     
     
     prediction_locations = pd.read_csv(f'{input_directory}prediction_locations.csv', sep = ',', index_col=0)
@@ -213,16 +208,16 @@ def generate_reconstruction(start_year, end_year,
 
 
     ## Fit regression models for inflow scaling based on NHM flows
-    if regression_nhm_inflow_scaling:
+    if inflow_scaling_regression:
         linear_models = {}
         linear_results = {}
-        for reservoir in nhm_scaled_reservoirs:
+        for reservoir in scaled_reservoirs:
             scaling_training_flows = prep_inflow_scaling_data()
             linear_models[reservoir], linear_results[reservoir] = train_inflow_scale_regression_models(reservoir,
                                                                                                     scaling_training_flows,
-                                                                                                    dataset='nhmv10',
+                                                                                                    dataset=donor_fdc,
                                                                                                     rolling=True,
-                                                                                                    window=nhm_scaling_roll_window)
+                                                                                                    window=scaling_rolling_window)
             
     ## QPPQ prediction
     # Generate 1 year at a time, to maximize the amount of data available for each years QPPQ
@@ -296,8 +291,8 @@ def generate_reconstruction(start_year, end_year,
                     
 
         ### Apply NHM scaling at Cannonsville and Pepacton (Optional)
-        if regression_nhm_inflow_scaling:
-            for node in nhm_scaled_reservoirs:
+        if inflow_scaling_regression:
+            for node in scaled_reservoirs:
                 unscaled_inflows = Q_reconstructed.loc[:, obs_pub_site_matches[node]]
                         
                 # Use linear regression to find inflow scaling coefficient
@@ -305,7 +300,7 @@ def generate_reconstruction(start_year, end_year,
                 for m in range(1,13):
                     quarter = get_quarter(m)
                     unscaled_month_inflows = unscaled_inflows.loc[unscaled_inflows.index.month == m, :].sum(axis=1)
-                    rolling_unscaled_month_inflows = unscaled_month_inflows.rolling(window=nhm_scaling_roll_window, 
+                    rolling_unscaled_month_inflows = unscaled_month_inflows.rolling(window=scaling_rolling_window, 
                                                                                     min_periods=1).mean()
                     rolling_unscaled_month_log_inflows = np.log(rolling_unscaled_month_inflows.astype('float64'))
                     
@@ -349,11 +344,11 @@ def generate_reconstruction(start_year, end_year,
         # Catchment inflows
         Q_reconstructed_catchment_inflows.to_csv(f'{output_directory}catchment_inflow_{dataset_name}.csv', sep = ',')
         shutil.copyfile(f'{output_directory}catchment_inflow_{dataset_name}.csv', 
-                                f'{pywrdrb_directory}/input_data/catchment_inflow_{dataset_name}.csv')
+                                f'{pywrdrb_dir}/input_data/catchment_inflow_{dataset_name}.csv')
         # Gage flows
         Q_reconstructed_gage_flows.to_csv(f'{output_directory}gage_flow_{dataset_name}.csv', sep = ',')
         shutil.copyfile(f'{output_directory}gage_flow_{dataset_name}.csv', 
-                        f'{pywrdrb_directory}/input_data/gage_flow_{dataset_name}.csv')
+                        f'{pywrdrb_dir}/input_data/gage_flow_{dataset_name}.csv')
         
     elif N_REALIZATIONS > 1:
         
@@ -371,11 +366,11 @@ def generate_reconstruction(start_year, end_year,
         # Catchment inflows
         export_ensemble_to_hdf5(df_ensemble_catchment_inflows, output_file= f'{output_directory}ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5')
         shutil.copyfile(f'{output_directory}ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5',
-                        f'{pywrdrb_directory}/input_data/historic_ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5')
+                        f'{pywrdrb_dir}/input_data/historic_ensembles/catchment_inflow_{dataset_name}_ensemble.hdf5')
 
         # Gage flows
         export_ensemble_to_hdf5(df_ensemble_gage_flows, output_file= f'./outputs/ensembles/gage_flow_{dataset_name}_ensemble.hdf5')
         shutil.copyfile(f'{output_directory}ensembles/gage_flow_{dataset_name}_ensemble.hdf5',
-                        f'{pywrdrb_directory}/input_data/historic_ensembles/gage_flow_{dataset_name}_ensemble.hdf5')
+                        f'{pywrdrb_dir}/input_data/historic_ensembles/gage_flow_{dataset_name}_ensemble.hdf5')
 
     return

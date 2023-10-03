@@ -31,24 +31,102 @@ def export_ensemble_to_hdf5(dict, output_file):
 
 
 
-def extract_realization_from_hdf5(hdf5_file, realization):
+
+def extract_realization_from_hdf5(hdf5_file, realization, nodes = None,
+                                  keyby_realization = False):
+    
+    if not keyby_realization:
+        assert(nodes is not None), 'Must provide nodes if keyby_realization is True'
+    
     with h5py.File(hdf5_file, 'r') as f:
-        realization_group = f[f"realization_{realization}"]
         
-        # Extract column labels
-        column_labels = realization_group.attrs['column_labels']
-        
-        # Extract timeseries data for each location
-        data = {}
-        for label in column_labels:
-            dataset = realization_group[label]
-            data[label] = dataset[:]
-        
-        # Get date indices
-        dates = realization_group['date'][:].tolist()
-        # dates = pd.to_datetime([d[1:] for d in dates])
-        
+        if keyby_realization:
+            group = f[f"realization_{realization}"]
+            
+            # Extract column labels
+            column_labels = group.attrs['column_labels']
+            
+            # Extract timeseries data for each location
+            data = {}
+            for label in column_labels:
+                dataset = group[label]
+                data[label] = dataset[:]
+            
+            # Get date indices
+            dates = group['date'][:].tolist()
+        else:
+            data={}
+            for n in nodes:
+                group = f[n]
+                dataset = group[f'realization_{realization}']
+                data[n] = dataset[:]
+                
+            # Get date indices
+            dates = group['date'][:].tolist()        
     # Combine into dataframe
     df = pd.DataFrame(data, index = dates)
     df.index = pd.to_datetime(df.index.astype(str))
     return df
+
+
+def get_hdf5_realization_numbers(filename):
+    """Checks the contents of an hdf5 file, and returns a list 
+    of the realization ID numbers contained.
+    Realizations have key 'realization_i' in the HDF5.
+
+    Args:
+        filename (str): The HDF5 file of interest
+
+    Returns:
+        list: Containing realizations ID numbers; realizations have key 'realization_i' in the HDF5.
+    """
+    realization_numbers = []
+    with h5py.File(filename, 'r') as file:
+        # Get the keys in the HDF5 file
+        keys = list(file.keys())
+
+        # Get the df using a specific node key
+        node_data = file[keys[0]]
+        column_labels = node_data.attrs['column_labels']
+        
+        # Iterate over the columns and extract the realization numbers
+        for col in column_labels:
+            if col.startswith('realization_'):
+                # Extract the realization number from the key
+                realization_number = int(col.split('_')[1])
+                realization_numbers.append(realization_number)
+    return realization_numbers
+
+def extract_loo_results_from_hdf5(hdf5_file):
+    with h5py.File(hdf5_file, 'r') as f:
+        
+        ensemble_flows = {}
+        for site_number in f.keys():
+            
+            # Bad gauge: see https://waterdata.usgs.gov/nwis/uv?site_no=01422389&legacy=1
+            if site_number == '01422389':
+                continue
+            
+            site_ensemble = f[site_number]
+        
+            # Extract column labels
+            column_labels = site_ensemble.attrs['column_labels']
+            
+            # Extract timeseries data for each location
+            data = {}
+            for label in column_labels:
+                dataset = site_ensemble[label]
+                data[label] = dataset[:]
+            
+            # Get date indices
+            dates = site_ensemble['date'][:].tolist()
+            # dates = pd.to_datetime([d[1:] for d in dates])
+            
+            # Combine into dataframe
+            df = pd.DataFrame(data, index = dates)
+            df.index = pd.to_datetime(df.index.astype(str))
+        
+            # Store in dictionary
+            ensemble_flows[site_number] = df
+
+    return ensemble_flows

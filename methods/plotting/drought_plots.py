@@ -90,3 +90,51 @@ def plot_ssi(ssi, bound = 3.0, figsize= (8, 4), ax = None, gradient = False):
         ax.fill_between(x=ssi.index, y1=nmax, y2=nmin, where=(droughts>0), color='red', alpha=0.5, interpolate=False, label = 'Drought Period')
     ax.set_ylim(nmin, nmax)
     return ax
+
+
+def plot_ssi_band(ssi, ymax, ymin, ax = None):
+    """Plot the standardized index values as a time series. 
+    Modified from https://github.com/martinvonk/SPEI/blob/main/src/spei/plot.py
+
+    Parameters
+    ----------
+    si : pandas.Series
+        Series of the standardized index
+    bound : int, optional
+        Maximum and minimum ylim of plot
+    figsize : tuple, optional
+        Figure size, by default (8, 4)
+    ax : matplotlib.Axes, optional
+        Axes handle, by default None which create a new axes
+
+    Returns
+    -------
+    matplotlib.Axes
+        Axes handle
+    """
+
+    # Classify droughts
+    in_critical_drought = False
+    droughts = np.zeros_like(ssi.values)
+    drought_days = []
+    for ind in range(len(droughts)):
+        if ssi.values[ind] < 0:
+            drought_days.append(ind)
+            
+            if ssi.values[ind] <= -1:
+                in_critical_drought = True
+            
+        else:
+            if in_critical_drought:
+                droughts[drought_days] =1
+            in_critical_drought = False
+            drought_days = [] 
+    
+    # Account for edge case where drought ends at end of time series
+    if in_critical_drought:
+        droughts[drought_days] =1    
+    
+    ax.fill_between(x=ssi.index, y1=ymax, y2=ymin, 
+                    where=(droughts>0), color='red', alpha=0.5, 
+                    interpolate=False)
+    return ax

@@ -1,1 +1,3 @@
-from .hdf5 import export_ensemble_to_hdf5, extract_realization_from_hdf5
+from .hdf5 import export_ensemble_to_hdf5, extract_realization_from_hdf5, extract_loo_results_from_hdf5
+from .hdf5 import get_hdf5_realization_numbers
+from .prep_loo import get_upstream_gauges
