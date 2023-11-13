@@ -27,6 +27,8 @@ def export_ensemble_to_hdf5(dict, output_file):
             for j in range(M):
                 dataset = grp.create_dataset(column_labels[j], 
                                              data=data[column_labels[j]].to_list())
+        # close file
+        f.close()
     return
 
 
@@ -62,10 +64,13 @@ def extract_realization_from_hdf5(hdf5_file, realization, nodes = None,
                 data[n] = dataset[:]
                 
             # Get date indices
-            dates = group['date'][:].tolist()        
+            dates = group['date'][:].tolist()  
+            
     # Combine into dataframe
     df = pd.DataFrame(data, index = dates)
     df.index = pd.to_datetime(df.index.astype(str))
+    # Close file
+    f.close()
     return df
 
 

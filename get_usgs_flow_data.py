@@ -23,6 +23,7 @@ bbox = (-77.8, 37.5, -74.0, 44.0)
 dates = ('1900-01-01', '2022-12-31')
 pywrdrb_dir = '../Pywr-DRB/'
 
+boundary = 'drb' if filter_drb else 'regional'
 
 ### 0.1: Request and save specific pywrdrb gauge flows
 ## Get historic observations that exist (including management)
@@ -110,11 +111,15 @@ reservoir_characteristics = ['CAT_NID_STORAGE2013', 'CAT_NDAMS2013', 'CAT_MAJOR2
 TOT_reservoir_characteristics = ['TOT_NID_STORAGE2013', 'TOT_NDAMS2013', 'TOT_MAJOR2013', 'TOT_NORM_STORAGE2013']
 
 ## Use the station IDs to retrieve basin information
-cat_chars = nldi.getcharacteristic_byid(gage_data.comid, fsource = 'comid', 
+tot_chars = nldi.getcharacteristic_byid(gage_data.comid, fsource = 'comid', 
                                         char_type= "tot", char_ids= TOT_reservoir_characteristics)
+local_chars = nldi.getcharacteristic_byid(gage_data.comid, fsource = 'comid',
+                                            char_type= "local", char_ids= reservoir_characteristics)
 
-cat = cat_chars.reset_index()
-cat.columns = ['comid', 'TOT_MAJOR2013', 'TOT_NDAMS2013',	'TOT_NID_STORAGE2013',	'TOT_NORM_STORAGE2013']
+cat_chars = pd.concat([tot_chars, local_chars], axis=1)
+
+cat = cat_chars
+cat['comid'] = cat.index
 print(f'Found characteristics for {cat_chars.shape} of {gage_data.shape} basins.')
 
 ## Make a list of known inflow gauges we want to use
@@ -139,8 +144,8 @@ unmanaged_gauge_data = gage_data.drop(managed_stations)
 print(f'{len(managed_stations)} of the {gage_data.shape[0]} gauge stations are managed and being removed.')
 
 # Export gage_data
-gage_data.to_csv('./data/drb_all_usgs_metadata.csv', sep=',')
-unmanaged_gauge_data.to_csv('./data/drb_unmanaged_usgs_metadata.csv', sep=',')
+gage_data.to_csv(f'./data/USGS/{boundary}_all_usgs_metadata.csv', sep=',')
+unmanaged_gauge_data.to_csv(f'./data/USGS/{boundary}_unmanaged_usgs_metadata.csv', sep=',')
 
 
 ### 3. Retrieve unmanaged flow data
@@ -151,4 +156,4 @@ nwis = NWIS()
 Q = nwis.get_streamflow(stations, dates)
 
 # Export all data to CSV
-Q.to_csv(f'./data/drb_historic_unmanaged_streamflow_cms.csv', sep=',')
+Q.to_csv(f'./data/USGS/{boundary}_historic_unmanaged_streamflow_cms.csv', sep=',')

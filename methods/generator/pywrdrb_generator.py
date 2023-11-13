@@ -122,7 +122,7 @@ def generate_reconstruction(start_year, end_year,
 
     ### Load data 
 
-    Q = pd.read_csv(f'{input_directory}historic_unmanaged_streamflow_1900_2023_cms.csv', sep = ',', index_col = 0, parse_dates=True)*cms_to_mgd
+    Q = pd.read_csv(f'{input_directory}drb_historic_unmanaged_streamflow_cms.csv', sep = ',', index_col = 0, parse_dates=True)*cms_to_mgd
     nhm_gauge_flow = pd.read_csv(f'{pywrdrb_dir}/input_data/gage_flow_nhmv10.csv', sep =',',  index_col = 0, parse_dates=True)
     nhm_inflow = pd.read_csv(f'{pywrdrb_dir}/input_data/catchment_inflow_nhmv10.csv', sep =',',  index_col = 0, parse_dates=True)
     

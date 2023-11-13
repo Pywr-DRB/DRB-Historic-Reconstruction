@@ -17,8 +17,8 @@ scaling_site_matches = {'cannonsville':{'nhmv10_gauges': ['1556', '1559'],
                                 'obs_gauges': ['01423000', '0142400103']},
                         'neversink': {'nhmv10_gauges': ['1645'],
                                       'nhmv10_hru': ['1638'],
-                                      'nwmv21_gauges': [],
-                                      'nwmv21_hru': [],
+                                      'nwmv21_gauges': ['01435000'],
+                                      'nwmv21_hru': ['4146742'],
                                       'obs_gauges': ['01435000']},
                         'pepacton': {'nhmv10_gauges': ['1440', '1441', '1443', '1437'],
                                         'nhmv10_hru': ['1449'],
@@ -38,12 +38,11 @@ scaling_site_matches = {'cannonsville':{'nhmv10_gauges': ['1556', '1559'],
 
 # List of all reservoirs able to be scaled
 nhmv10_scaled_reservoirs = list(scaling_site_matches.keys())
-nwmv21_scaled_reservoirs = ['cannonsville', 'pepacton', 'fewalter', 'beltzvilleCombined']
+nwmv21_scaled_reservoirs = list(scaling_site_matches.keys())
+
 
 # Quarters to perform regression over
 quarters = ('DJF','MAM','JJA','SON')
-
-
 
 
 
@@ -76,6 +75,7 @@ def prep_inflow_scaling_data():
     nwm_gauge_flows = pd.read_csv(f'{data_dir}/NWMv21/nwmv21_unmanaged_gauge_streamflow_daily_mgd.csv', 
                                         sep = ',', index_col=0, parse_dates=True)
     nwm_gauge_flows= nwm_gauge_flows.loc['1983-10-01':, :]
+
 
     # Metadata
     nwm_gauge_meta = pd.read_csv(f'{data_dir}/NWMv21/nwmv21_unmanaged_gauge_metadata.csv', 

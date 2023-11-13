@@ -7,7 +7,7 @@ from methods.generator import generate_reconstruction
 if __name__ == '__main__':
 
     generate_ensembles= True
-    n_ensemble_samples= 30
+    n_ensemble_samples= 50
 
     # Constants across variations
     start_year= 1945

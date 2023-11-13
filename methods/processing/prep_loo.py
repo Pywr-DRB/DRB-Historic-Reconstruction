@@ -43,6 +43,7 @@ def get_upstream_gauges(stations,
         gauge_meta (pd.DataFrame): A dataframe of gauge metadata with site numbers as index and a 'comid' column.
         simplify (bool, optional): If True, only return the largest subcatchments (i.e., only independent catchments).
     """
+    print('Searching for upstream gauges for each site...')
     ## use pynhd to identify upstream gauges for each model site
     catchment_subcatchments = {}
     nldi = nhd.NLDI()

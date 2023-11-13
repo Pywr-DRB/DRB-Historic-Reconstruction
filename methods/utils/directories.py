@@ -15,3 +15,6 @@ output_dir = os.path.realpath(os.path.join(ROOT_DIR, './outputs/')) + '/'
 fig_dir = os.path.realpath(os.path.join(ROOT_DIR, './figures/')) + '/'
 
 pywrdrb_dir = os.path.realpath(os.path.join(ROOT_DIR, '../Pywr-DRB/')) + '/'
+
+path_to_nhm_data = os.path.realpath(os.path.join(ROOT_DIR, '../NHM-Data-Retrieval/outputs/hdf/')) + '/'
+path_to_nwm_data = os.path.realpath(os.path.join(ROOT_DIR, '../NWMv21/')) + '/'

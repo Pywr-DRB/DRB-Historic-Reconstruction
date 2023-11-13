@@ -15,6 +15,7 @@ from methods.generator.QPPQModel import StreamflowGenerator
 from methods.generator.single_site_generator import generate_single_gauge_reconstruction
 from methods.processing.hdf5 import export_ensemble_to_hdf5
 from methods.processing import get_upstream_gauges
+from methods.utils.constants import cms_to_mgd
 
 def leave_one_out_prediction(model_streamflows, 
                              model_gauge_matches, 
@@ -169,8 +170,6 @@ def leave_one_out_prediction(model_streamflows,
 
 if __name__ == '__main__':
 
-    # Constants
-    cms_to_mgd = 22.82
 
     ## Relevant paths
     path_to_nhm_data = '../NHM-Data-Retrieval/outputs/hdf'
@@ -181,11 +180,11 @@ if __name__ == '__main__':
     
     ## USGS 
     # Flows: DateTime index with USGS-{station_id} column names
-    unmanaged_gauge_flows = pd.read_csv('./data/historic_unmanaged_streamflow_1900_2023_cms.csv', sep = ',', 
+    unmanaged_gauge_flows = pd.read_csv('./data/USGS/drb_historic_unmanaged_streamflow_cms.csv', sep = ',', 
                                     dtype = {'site_no':str}, index_col=0, parse_dates=True)*cms_to_mgd
 
     # Metadata: USGS site number, longitude, latitude, comid, etc.
-    unmanaged_gauge_meta = pd.read_csv('./data/drb_unmanaged_usgs_metadata.csv', sep = ',', 
+    unmanaged_gauge_meta = pd.read_csv('./data/USGS/drb_unmanaged_usgs_metadata.csv', sep = ',', 
                                     dtype = {'site_no':str})
     unmanaged_gauge_meta.set_index('site_no', inplace=True)
     
@@ -240,11 +239,11 @@ if __name__ == '__main__':
     ####################################
     
     ## Specs
-    min_k = 5
-    max_k = 7
+    min_k = 4
+    max_k = 5
     n_ensemble = 30
     ensemble_k = 7
-    start_year = 1983
+    start_year = 1945
     end_year = 2020
     
     # Loop through different generation methods
@@ -260,7 +259,7 @@ if __name__ == '__main__':
         else:
             raise ValueError(f'Invalid donor_flow: {donor_flow}')
         
-        for K in range(min_k, max_k+1):
+        for K in [5]:
                 
                 print(f'Generating {donor_flow} based predictions with K={K} and aggregate QPPQ')
         
@@ -278,22 +277,22 @@ if __name__ == '__main__':
                                             start_year= start_year,
                                             end_year= end_year)
                         
-        # # Probabalistic QPPQ with only a single K parameterization
-        # print(f'Generating {donor_flow} based ensemble QPPQ predictions with K={ensemble_k} and {n_ensemble} realizations')
+        # Probabalistic QPPQ with only a single K parameterization
+        print(f'Generating {donor_flow} based ensemble QPPQ predictions with K={ensemble_k} and {n_ensemble} realizations')
 
-        # # Ensemble filename
-        # output_filename = f'./outputs/LOO/loo_reconstruction_{donor_flow}_K{ensemble_k}'
+        # Ensemble filename
+        output_filename = f'./outputs/LOO/loo_reconstruction_{donor_flow}_K{ensemble_k}'
 
-        # leave_one_out_prediction(model_streamflows= model_streamflows,
-        #                             model_gauge_matches= model_gauge_matches,
-        #                             unmanaged_gauge_flows= unmanaged_gauge_flows,
-        #                             unmanaged_gauge_meta= unmanaged_gauge_meta,
-        #                             K= ensemble_k,
-        #                             gauge_subcatchments= catchment_subcatchments,
-        #                             n_realizations= n_ensemble,
-        #                             output_filename=output_filename,
-        #                             start_year= start_year,
-        #                             end_year= end_year)
+        leave_one_out_prediction(model_streamflows= model_streamflows,
+                                    model_gauge_matches= model_gauge_matches,
+                                    unmanaged_gauge_flows= unmanaged_gauge_flows,
+                                    unmanaged_gauge_meta= unmanaged_gauge_meta,
+                                    K= ensemble_k,
+                                    gauge_subcatchments= catchment_subcatchments,
+                                    n_realizations= n_ensemble,
+                                    output_filename=output_filename,
+                                    start_year= start_year,
+                                    end_year= end_year)
     
 
 

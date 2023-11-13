@@ -16,6 +16,7 @@ def aggregate_and_rolling_sum(Q_i,
     if aggregate is not None:
         Q_i = Q_i.resample(aggregate).sum()
     Q_i = Q_i.rolling(window).sum().iloc[window:, :].dropna()
+    Q_i = Q_i.iloc[:-window, :]
     return Q_i
     
 
