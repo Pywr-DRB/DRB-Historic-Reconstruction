@@ -120,7 +120,7 @@ obs_pub_site_matches = {'cannonsville': ['01423000', '0142400103'], # 0142400103
                     'greenLane': ['01472199', '01472198'],   # PUB until 1981
                     '01425000': None,
                     '01417000': None,
-                    'delLordville': None, #['01427207'], # PUB until 2006 then '01427207'
+                    'delLordville': None, #['01427207'],
                     '01436000': None,
                     '01433500': None, 
                     'delMontague': None, #['01438500'],

@@ -70,10 +70,12 @@ def get_errors(Q_obs, Q_sim, bias=False):
 
 
 
-def get_error_summary(data, models, sites,
-                          by_year = False,
-                          start_date='1983-10-01', 
-                          end_date='2016-12-31'):
+def get_error_summary(data, 
+                      models, 
+                      sites,
+                      by_year = False,
+                      start_date='1983-10-01', 
+                      end_date='2016-12-31'):
     
     summary_columns = ['model', 'site', 'realization', 'metric', 'value']
     if by_year:
@@ -153,7 +155,7 @@ def get_error_summary(data, models, sites,
                 Q_obs = Q_obs.loc[Q_obs > 0]
                 Q_sim = data[model].loc[Q_obs.index, site_number]
                 assert(len(Q_obs) == len(Q_sim)), f'Lengths of Q_obs and Q_sim do not match for {site_number}'
-                assert(len(Q_obs) > 0), f'No overlap between Q_obs and Q_sim for {site_number}'
+                assert(len(Q_obs) > 30), f'No overlap between Q_obs and Q_sim for {site_number}'
                 
                 if by_year:
                     year_min = Q_obs.index.min().year
@@ -169,7 +171,10 @@ def get_error_summary(data, models, sites,
                         mod_errors = get_errors(Q_obs_yr, Q_sim_yr, bias=False)
                         model_errors_summary = []
                         for k in mod_errors.keys():
-                            summary_row = [model, site_number, 0, k, mod_errors[k], yr]
+                            mod_error_val = mod_errors[k]
+                            if np.isnan(mod_error_val):
+                                print(f'Q_obs: {Q_obs.shape} Q_sim: {Q_sim.shape}, {site_number}')
+                            summary_row = [model, site_number, 0, k, mod_error_val, yr]
                             model_errors_summary.append(summary_row)
                         model_errors_summary = pd.DataFrame(model_errors_summary, columns=summary_columns)
                         error_summary = pd.concat([error_summary, model_errors_summary], ignore_index=True)
@@ -181,7 +186,11 @@ def get_error_summary(data, models, sites,
                     # Reformat to meet error_summary format
                     model_errors_summary = []
                     for k in mod_errors.keys():
-                        summary_row = [model, site_number, 0, k, mod_errors[k]]
+                        mod_error_val = mod_errors[k]
+                        if np.isnan(mod_error_val):
+                            print(f'Q_obs: {Q_obs.shape} Q_sim: {Q_sim.shape}, {site_number}')
+                            
+                        summary_row = [model, site_number, 0, k, mod_error_val]
                         model_errors_summary.append(summary_row)
                     model_errors_summary = pd.DataFrame(model_errors_summary, columns=summary_columns)
                     error_summary = pd.concat([error_summary, model_errors_summary], ignore_index=True)

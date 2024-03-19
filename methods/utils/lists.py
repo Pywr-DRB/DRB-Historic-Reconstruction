@@ -1,8 +1,12 @@
 import pandas as pd
 
-model_names = ['obs_pub_nhmv10_ObsScaled', 'obs_pub_nwmv21_ObsScaled',
+model_datasets = ['obs', 'nhmv10', 'nwmv21', 
+               'obs_pub_nhmv10_ObsScaled', 'obs_pub_nwmv21_ObsScaled',
                'obs_pub_nhmv10_ObsScaled_ensemble', 'obs_pub_nwmv21_ObsScaled_ensemble']
 
+pub_model_datasets = model_datasets[2:]
+
+ensemble_datasets = ['obs_pub_nhmv10_ObsScaled_ensemble', 'obs_pub_nwmv21_ObsScaled_ensemble']
 
 nyc_reservoirs = ['cannonsville', 'pepacton', 'neversink']
 upper_basin_reservoirs = ['prompton', 'mongaupeCombined', 'wallenpaupack', 
@@ -12,10 +16,6 @@ mid_basin_reservoirs = ['fewalter', 'hopatcong', 'beltzvilleCombined',
 lower_basin_reservoirs = ['blueMarsh', 'ontelaunee', 'stillCreek', 
                           'greenLane']
 
-model_datasets = ['nhmv10', 'nwmv21', 'pub_nhmv10', 'pub_nwmv21', 'pub_nhmv10_ens', 'pub_nwmv21_ens']
-single_datasets = ['nhmv10', 'nwmv21', 'pub_nhmv10', 'pub_nwmv21']
-pub_datasets = ['pub_nhmv10', 'pub_nwmv21', 'pub_nhmv10', 'pub_nwmv21']
-ensemble_datasets = ['pub_nhmv10_ens', 'pub_nwmv21_ens']
 
 # Historic DRBC drought events
 event_types = [['Emergency', '1965-07-07', '1967-03-15'],
@@ -43,4 +43,18 @@ event_types = [['Emergency', '1965-07-07', '1967-03-15'],
     ['Watch', '2016-11-23', '2017-01-18']]
 
 drbc_droughts = pd.DataFrame(event_types, columns=['event_type', 'start_date', 'end_date'])
-drbc_droughts.head()
+
+
+## A list of sites known to be managed but getting past the filtering
+known_managed_sites = ['01474500', # On the schuylkill
+                       '01460378', # On the D&R canal
+                       '01422389',   # Bad gauge: see https://waterdata.usgs.gov/nwis/uv?site_no=01422389&legacy=1
+                       '01464000']
+
+
+management_characteristics = ['NID_STORAGE2013', 'CANALDITCH', 
+                              'RESERVOIR', 'ARTIFICIAL', 
+                             'NDAMS2013', 'MAJOR2013', 'NORM_STORAGE2013']
+cat_characteristics = [f'CAT_{c}' for c in management_characteristics]
+acc_characteristics = [f'ACC_{c}' for c in management_characteristics]
+tot_characteristics = [f'TOT_{c}' for c in management_characteristics]

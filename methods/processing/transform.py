@@ -44,6 +44,7 @@ def transform_results_dict_flow(data, transform, window,
     assert(transform in ['rolling', 'aggregation']), 'transform must be rolling or aggregation'
     
     for key in data.keys():
+        print(f'Transforming {key} flow')
         if 'ensemble' in key:
             data[key] = transform_ensemble_flow(data[key], transform, window, 
                                                 aggregation_type, aggregation_length)

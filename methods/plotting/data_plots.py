@@ -30,8 +30,8 @@ def plot_data_summary(Q_obs_unmanaged,
     marker_colors = {'gauge': 'darkblue',
                     'diagnostic_site': 'darkorange',
                     'pywrdrb_node': 'cornflowerblue'}
-    marker_sizes = {'gauge': 50,
-                    'diagnostic_site': 60,
+    marker_sizes = {'gauge': 85,
+                    'diagnostic_site': 95,
                     'pywrdrb_node': 35}
 
     # Define the custom colormap
@@ -50,7 +50,7 @@ def plot_data_summary(Q_obs_unmanaged,
     ax2 = axs[1]
         
     ### Subplot 1: Map of sites
-    drb_boundary.plot(ax=ax1, color='white', edgecolor='dimgrey', lw=0.5,
+    drb_boundary.plot(ax=ax1, color='white', edgecolor='dimgrey', lw=0.6,
                       label = 'DRB Boundary', zorder=0)
     # drb_mainstem.plot(ax=ax, color='black', edgecolor='black', lw=2)
     
@@ -61,18 +61,18 @@ def plot_data_summary(Q_obs_unmanaged,
             edgecolor=marker_colors['gauge'],
             s=marker_sizes['gauge'], 
             lw=1, zorder=4, alpha = 0.75, 
-            label ='Unmanaged USGS Gauges')
+            label ='USGS Gauge')
     
     # Plot diagnostic sites
     ax1.scatter(unmanaged_gauge_meta.loc[diagnostic_site_list, 'long'], 
                 unmanaged_gauge_meta.loc[diagnostic_site_list, 'lat'],
-               c= marker_colors['gauge'],
-               edgecolor = marker_colors['diagnostic_site'], 
+               c= marker_colors['diagnostic_site'],
+               edgecolor = marker_colors['gauge'], 
                s=marker_sizes['diagnostic_site'], 
                marker=marker_types['diagnostic_site'],
-               lw=1, 
-               zorder=5, alpha = 0.85,
-               label='Diagnostic Gauge Prediction Locations')
+               lw=1.5, 
+               zorder=5, alpha = 1,
+               label='USGS Gauge - Diagnostic Comparison Site')
     
     # Plot pywrdrb nodes
     ax1.scatter(pywrdrb_node_metadata.loc[:, 'long'], pywrdrb_node_metadata.loc[:, 'lat'],
@@ -136,26 +136,32 @@ def plot_data_summary(Q_obs_unmanaged,
     # ax2.set_ylabel(f'USGS Gauge Stations (N = {len(sorted_index)})', fontsize=12)
 
     # Create custom patches for the legend
-    data_available_patch = mpatches.Patch(color='blue', label='Data available')
-    no_data_patch = mpatches.Patch(facecolor='white', edgecolor='black', label='No data')
+    data_available_patch = mpatches.Patch(color="darkblue", label='Data Available')
+    no_data_patch = mpatches.Patch(facecolor='white', edgecolor='black', label='No Data')
     
     # Collect legend handles and labels from ax1
     handles_ax1, labels_ax1 = ax1.get_legend_handles_labels()
 
     # Combine the handles and labels from both axes
     handles = handles_ax1 + [data_available_patch, no_data_patch]
-    labels = labels_ax1 + ['Data available', 'No data']
+    labels = labels_ax1 + ['Data Available', 'No Data']
 
     # Create a single legend for the figure
     fig.legend(handles, labels, 
                loc='lower center', 
                ncol=2, 
                fontsize=legend_fsize)
-    
-    fig.subplots_adjust(bottom=0.20)
+
+    # Set bounding boxes around axes as dark grey
+    spine_color = 'black'
+    for ax in axs:
+        for side in ['top', 'right', 'bottom', 'left']:
+            ax.spines[side].set_color(spine_color)
+            
+    fig.subplots_adjust(bottom=0.21)
     fig.subplots_adjust(wspace=0.01)
     fig.align_labels()
     plt.savefig(f'{fig_dir}/data_summary_sortby_{sort_by}.svg', 
                 bbox_inches='tight', dpi=fig_dpi)
-    plt.show()
+    plt.close()
     return

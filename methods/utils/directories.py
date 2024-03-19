@@ -10,11 +10,16 @@ import os
 # Absolute directory to the pywrdrb folder
 ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '../../'))
 
-data_dir = os.path.realpath(os.path.join(ROOT_DIR, './data/')) + '/'
-output_dir = os.path.realpath(os.path.join(ROOT_DIR, './outputs/')) + '/'
-fig_dir = os.path.realpath(os.path.join(ROOT_DIR, './figures/')) + '/'
+DATA_DIR = os.path.realpath(os.path.join(ROOT_DIR, './data/')) + '/'
+OUTPUT_DIR = os.path.realpath(os.path.join(ROOT_DIR, './outputs/')) + '/'
+FIG_DIR = os.path.realpath(os.path.join(ROOT_DIR, './figures/')) + '/'
 
-pywrdrb_dir = os.path.realpath(os.path.join(ROOT_DIR, '../Pywr-DRB/')) + '/'
+PYWRDRB_DIR = os.path.realpath(os.path.join(ROOT_DIR, '../Pywr-DRB/')) + '/'
 
-path_to_nhm_data = os.path.realpath(os.path.join(ROOT_DIR, '../NHM-Data-Retrieval/outputs/hdf/')) + '/'
+path_to_nhm_data = os.path.realpath(os.path.join(ROOT_DIR, '../NHM-Data-Retrieval/datasets/NHMv10/')) + '/'
 path_to_nwm_data = os.path.realpath(os.path.join(ROOT_DIR, '../NWMv21/')) + '/'
+
+data_dir = DATA_DIR
+output_dir = OUTPUT_DIR
+pywrdrb_dir = PYWRDRB_DIR
+fig_dir = FIG_DIR

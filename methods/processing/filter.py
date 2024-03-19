@@ -28,6 +28,31 @@ def filter_drb_sites(x, sdir = '../Pywr-DRB/DRB_spatial/DRB_shapefiles'):
     return x_filtered
 
 
+def filter_usgs_nwis_query_by_type(query_result, 
+                              site_tp_cd=['ST'],
+                              parm_cd='00060'):
+    """
+    Filters USGS gauge metadata based on site_tp_cd and parm_cd.
+    
+    Info about site_tp_cd: https://maps.waterdata.usgs.gov/mapper/help/sitetype.html
+    Info about parm_cd: https://help.waterdata.usgs.gov/parameter_cd?group_cd=PHY
+    
+    Args:
+        query_result (pd.DataFrame): The result of a query to the USGS NWIS database from pygeohydro.
+        site_tp_cd (str, optional): The site type classification. Defaults to 'ST'.
+
+    Returns:
+        pd.DataFrame: The filtered dataframe containing gauge metadata.
+    """
+    
+    # Filter non-streamflow stations
+    query_result = query_result.query(f"site_tp_cd in ({site_tp_cd})") 
+    query_result = query_result[query_result.parm_cd == parm_cd] 
+    query_result = query_result.reset_index(drop = True)
+    return query_result
+
+
+
 def get_sites_by_basin(basin):
     """
     Returns gauge IDs which are located in either the upper, mid, or lower basin. 

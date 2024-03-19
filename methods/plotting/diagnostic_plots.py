@@ -7,7 +7,7 @@ import seaborn as sns
 
 from methods.utils.directories import fig_dir
 from methods.diagnostics.metrics import group_metric_data_yearbin
-from .styles import model_colors, model_labels
+from .styles import model_colors, model_labels, metric_labels
 from .styles import lower_bound_metric_scores, upper_bound_metric_scores, ideal_metric_scores
 from .styles import ax_tick_label_fsize, ax_label_fsize, sup_title_fsize, legend_fsize
 from .styles import fig_dpi
@@ -21,7 +21,7 @@ def plot_error_slope_subplot(ax, model, metric, error_summary, sites,
     """
     ## Specs
 
-    scatter_pt_size = 80
+    scatter_pt_size = 85
     scatter_alpha = 0.5
     line_alpha = 0.9
 
@@ -143,13 +143,16 @@ def plot_error_cdf_subplot(ax, models, metric, error_summary,
                     lw=3, zorder=3)
         if plot_median:
             if 'ensemble' not in model:
-                ax.scatter(0.5, np.median(data_rank[model]), color=model_colors[model], 
-                           marker="^", s=100, zorder = 4)
+                
+                median_value= np.median(data_rank[model])
+                ax.scatter(0.5, median_value, color=model_colors[model], 
+                           edgecolor='black', linewidth=1,
+                           marker="^", s=100, zorder = 5)                
     
     if legend:
         ax.legend()
     if axis_labels:
-        ax.set_ylabel(metric.upper())
+        ax.set_ylabel(metric_labels[metric], fontsize=ax_label_fsize)
         ax.set_xlabel('Rank')
 
 
@@ -160,8 +163,11 @@ def plot_error_cdf_subplot(ax, models, metric, error_summary,
         
     # ax.set_yticklabels([lower_bound_metric_scores[metric], upper_bound_metric_scores[metric]])
     ax.set_yticks([lower_bound_metric_scores[metric], upper_bound_metric_scores[metric]])
+    ax.set_yticklabels([lower_bound_metric_scores[metric], upper_bound_metric_scores[metric]], 
+                       fontsize= ax_tick_label_fsize)
     ax.set_xticks([0, 1])
     ax.set_xticklabels([])
+
     return ax
 
 
@@ -170,6 +176,7 @@ def plot_Nx3_error_slope_cdf(error_summary, models, metrics, sites,
                              plot_ensemble=False, fig_dir = fig_dir):
     
     fig, axs = plt.subplots(nrows=len(metrics), ncols= 3, 
+                            sharex='col', sharey='row',
                             figsize = (len(metrics)*2.5, len(metrics)*3))
 
     for i,m in enumerate(metrics):
@@ -184,23 +191,49 @@ def plot_Nx3_error_slope_cdf(error_summary, models, metrics, sites,
                                     maximize=is_max)
         
         axs[i, 2] = plot_error_cdf_subplot(axs[i, 2], models, m, error_summary, 
-                                           legend=False,
-                                axis_labels=False, maximize=is_max)
-
-        axs[i,0].set_ylabel(m.upper(), fontsize=16)
+                                           legend=False, 
+                                           axis_labels=False, 
+                                           maximize=is_max, plot_median=True, 
+                                           plot_ensemble_range=plot_ensemble)
+        axs[i,0].set_ylabel(metric_labels[m], fontsize=ax_label_fsize)
 
     axs[-1, 0].set_xticklabels(['NHMv1.0', 'PUB-NHM'], fontsize=12)
     axs[-1, 1].set_xticklabels(['NWMv2.1', 'PUB-NWM'], fontsize=12)
     axs[-1, 2].set_xlabel('Rank', fontsize=12)
     axs[-1, 2].set_xticklabels(['Worst', 'Best'], fontsize=12)
-    plt.suptitle('Difference in metric performance between\nNHM/NWM and corresponding PUB-based predictions', fontsize=14, y=0.95)
-    plt.tight_layout()
     
+    # Add a colorbar for slope improvement plots
+    
+    # Get mappable from ax
+    im = axs[0, 0].get_children()[0]
+    # Make a new axis for the colorbar
+    cax = fig.add_axes([0.0, -0.25, 0.5, 0.2])
+    # Add colorbar to new axis
+    cbar = fig.colorbar(im, cax=cax)
+    cbar.set_label('PUB Improvement', rotation=270, labelpad=12)
+    cbar.set_ticks([-0.5, 0, 0.5])
+        
+    # plt.suptitle('Difference in metric performance between\nNHM/NWM and corresponding PUB-based predictions', fontsize=14, y=0.95)
+    plt.tight_layout()
+    fig.align_ylabels(axs[:, 0])
     # Save
     plt.savefig(f'{fig_dir}/diagnostics/Nx3_LeaveOneOut_{metrics}.png', 
                 dpi=300, bbox_inches='tight')
-    plt.show()
+    plt.close()
     return
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def plot_binyear_boxplot_subplot(error_summary_annual, 
@@ -267,21 +300,26 @@ def plot_Nx1_binyear_boxplots(error_summary_annual,
                               ideal_metric_scores=ideal_metric_scores,
                               lower_bound_metric_scores=lower_bound_metric_scores,
                               upper_bound_metric_scores=upper_bound_metric_scores,
-                              bin_size=10, plot_ensembles= True):
+                              bin_size=10, plot_ensembles= True,
+                              fig_dir=fig_dir):
 
     NROWS = len(metrics)
     # Set up the matplotlib figure and aesthetics
     sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
+    plt.ioff()
     
     fig, axs = plt.subplots(nrows=NROWS, ncols=1, 
                             figsize=(8, (NROWS*1.75)), 
                             dpi = 300, sharex=True)
     for i, metric in enumerate(metrics):
         ax = axs[i]
-        plot_binyear_boxplot_subplot(error_summary_annual, ax, model_colors,
-                                    ideal_metric_scores, lower_bound_metric_scores, 
-                                    upper_bound_metric_scores,
-                                    metric=metric, bin_size=bin_size,
+        plot_binyear_boxplot_subplot(error_summary_annual, ax, 
+                                     metric, 
+                                     model_colors=model_colors,
+                                    ideal_metric_scores=ideal_metric_scores, 
+                                    lower_bound_metric_scores=lower_bound_metric_scores, 
+                                    upper_bound_metric_scores=upper_bound_metric_scores,
+                                    bin_size=bin_size,
                                     plot_ensembles=plot_ensembles)
     
     # Make a single legend for the whole plot
@@ -294,7 +332,9 @@ def plot_Nx1_binyear_boxplots(error_summary_annual,
     
     
     plt.tight_layout()
-    plt.show()
+    plt.savefig(f'{fig_dir}/diagnostics/Nx1_binyear_boxplots_{metrics}.svg', 
+                dpi = fig_dpi, bbox_inches='tight')
+    # plt.show()
     return 
 
 
@@ -360,5 +400,7 @@ def plot_grid_metric_map(error_summary, donor_model, site_catchment_areas=None):
     cbar.ax.set_ylabel(f'Metric Improvement Following PUB Estimation', 
                        rotation=-90, fontsize=16, va='bottom')
     # cbar.yticklabels(fontsize=14)
+    plt.savefig(f'{fig_dir}/diagnostics/grid_metric_map_{donor_model}.png', dpi=300, bbox_inches='tight')
+    
     plt.show()
     return

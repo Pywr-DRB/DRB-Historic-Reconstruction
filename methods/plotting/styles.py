@@ -4,19 +4,25 @@ fig_dpi = 300
 ax_tick_label_fsize = 10
 ax_label_fsize = 12
 sup_title_fsize = 12
-legend_fsize = 10
+legend_fsize = 9
 
 
+# Aesthetics for plotting
 # Aesthetics for plotting
 model_colors = {
     'obs': 'black',
     'nhmv10' : '#925736', 
     'nwmv21' : '#385723',
-    'obs_pub_nhmv10' : '#F27300', 
-    'obs_pub_nhmv10_ensemble' : '#FAD790', 
+    'obs_pub_nhmv10' : '#F27300',
+    'obs_pub_nhmv10_ObsScaled': '#F27300', 
+    'obs_pub_nhmv10_ensemble' : '#F9B572', 
+    'obs_pub_nhmv10_ObsScaled_ensemble' : '#F9B572', 
     'obs_pub_nwmv21' : '#0174BE', 
-    'obs_pub_nwmv21_ensemble': '#9CD2F6'
+    'obs_pub_nwmv21_ensemble': '#9CD2F6',
+    'obs_pub_nwmv21_ObsScaled' : '#0174BE', 
+    'obs_pub_nwmv21_ObsScaled_ensemble': '#9CD2F6'
     }
+
 
 model_labels = {
     'obs': 'Observed',
@@ -71,3 +77,10 @@ upper_bound_metric_scores = {'nse':1, 'kge':1, 'r':1, 'alpha':2, 'beta':2,
                        'AbsQ0.1pbias':3, 'AbsQ0.2pbias':3, 'AbsQ0.3pbias':3}
 
 
+# Metric labels
+metric_labels = {'nse': 'NSE', 'kge': 'KGE', 'r': 'Pearson Correlation', 'alpha': 'Alpha', 'beta': 'Beta',
+                 'log_nse': 'Log-NSE', 'log_kge': 'Log-KGE', 'log_r': 'Log Pearson Correlation', 
+                 'log_alpha': 'Log-Alpha', 'log_beta': 'Log-Beta', 
+                 'Q0.1pbias': '0.1% Bias', 'Q0.2pbias': '0.2% Bias', 'Q0.3pbias': '0.3% Bias', 
+                 'AbsQ0.1pbias': '0.1% Abs. Bias', 'AbsQ0.2pbias': '0.2% Abs. Bias', 
+                 'AbsQ0.3pbias': '0.3% Abs. Bias'}
