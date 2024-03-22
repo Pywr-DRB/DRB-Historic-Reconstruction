@@ -96,7 +96,8 @@ def get_error_summary(data,
     for model in models:
         print(f'Getting errors across {model} dataset')
         subset_start_date = '1983-10-01' if model in ['nhmv10', 'nwmv21'] else start_date
-        subset_end_date = '2016-12-31' if model in ['nhmv10', 'nwmv21'] else end_date
+        subset_end_date = '2016-12-31' if model in ['nhmv10'] else end_date
+        subset_end_date = '2020-12-31' if model in ['nwmv21'] else subset_end_date
         
         if 'ensemble' in model:
             for si, site_number in enumerate(sites):
