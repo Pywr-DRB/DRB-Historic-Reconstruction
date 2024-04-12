@@ -10,7 +10,7 @@ import geopandas as gpd
 from pygeohydro import NWIS
 import pynhd as pynhd
 
-from methods.utils.directories import DATA_DIR, OUTPUT_DIR
+from methods.utils.directories import DATA_DIR, OUTPUT_DIR, PYWRDRB_DIR
 from methods.utils.filter import filter_usgs_nwis_query_by_type, filter_drb_sites
 from methods.retrieval.NLDI import add_comid_metadata_to_gage_data
 from methods.spatial.upstream import get_upstream_gauges_for_id_list, update_upstream_gauge_file
@@ -18,7 +18,7 @@ from methods.spatial.catchments import get_basin_geometry
 from methods.utils.constants import GEO_CRS
 from methods.utils.nid import get_nid_data, get_dam_storages
 from methods.utils.nid import get_dam_data_within_catchment
-from methods.generator.pywr_drb_node_data import nhm_site_matches, obs_pub_site_matches
+from methods.generator.pywr_drb_node_data import obs_pub_site_matches, obs_site_matches
 
 # Filenames for upstream gauge jsons
 from methods.spatial.upstream import station_upstream_gauge_file
@@ -371,6 +371,21 @@ if __name__ == "__main__":
 
     Q_unmanaged_total.to_csv(f'{DATA_DIR}/USGS/{boundary}_streamflow_daily_usgs_unmanaged_cms.csv',
                                 sep=',')
+    
+
+    pywrdrb_stations = [s for n,s in obs_pub_site_matches.items() for s in s if len(s)>0]    
+    
+    nwis = NWIS()
+    Q_pywrdrb = nwis.get_streamflow(pywrdrb_stations, dates)
+    Q_pywrdrb.index = pd.to_datetime(Q_pywrdrb.index.date)
+
+    for s in pywrdrb_stations:
+        assert(f'USGS-{s}' in Q_pywrdrb.columns),'PywrDRB gauge {s} is missing from the data.'
+
+    # Export
+    Q_pywrdrb.to_csv(f'{OUTPUT_DIR}/streamflow_daily_usgs_1950_2022_cms.csv', sep=',')
+    Q_pywrdrb.to_csv(f'{PYWRDRB_DIR}/input_data/usgs_gages/streamflow_daily_usgs_1950_2022_cms.csv', sep=',')
+    
     
     print(f'Got streamflow timeseries at all sites.')
     print('DONE!')
