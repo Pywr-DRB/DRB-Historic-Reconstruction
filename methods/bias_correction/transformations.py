@@ -71,8 +71,8 @@ def correct_quantile_biases(X_modeled, X_biases, method, area=None):
     """
     if area is not None:
         assert 'area' in area.columns, "Area DataFrame must contain 'area' column"
-        assert (X_modeled.index == area.index).all(), "Indices of X_modeled and area must match"
-        A = area['area']
+        # assert (X_modeled.index == area.index).all(), "Indices of X_modeled and area must match"
+        A = area['area'].values[0]
     else:
         A = 1
 

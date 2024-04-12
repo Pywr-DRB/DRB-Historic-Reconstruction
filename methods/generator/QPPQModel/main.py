@@ -3,11 +3,6 @@ Trevor Amestoy
 Cornell University
 Fall 2022
 
-The function IDW_generator takes:
-- A set of observed flow timeseries
-- FDC at a target site
-- The locations (lat, long) of the observed sites
-- The location (lat, long) of the target site
 
 
 And performs an inverse-distance weighted prediction of flow timeseries at the

@@ -28,19 +28,33 @@ def bayesian_bias(x, y,
                   n_tune=1000, 
                   n_sample=1000, 
                   target_accept=0.95,
+                  beta_dist='normal',
+                  alpha_dist='normal',
+                  param_sigma_prior = 0.25,
                   n_cores=6):
     
     
     with pm.Model() as model:
-        param_sigma = 0.25
-        # Priors for alpha, beta, gamma
-        alpha = pm.Normal('alpha', mu=1.0, 
-                          sigma=param_sigma, shape=x.shape[1])
 
-        # Prior for the first quantile
-        beta = pm.Normal('b_0', mu=1, 
-                         sigma=param_sigma, shape=x.shape[1])
-        
+        # Priors for alpha, beta, gamma
+        if alpha_dist == 'normal':
+            alpha = pm.Normal('alpha', mu=1.0, 
+                            sigma=param_sigma_prior, 
+                            shape=x.shape[1])
+        elif alpha_dist == 'studentt':
+            alpha = pm.StudentT('alpha', nu=2, mu=1.0, 
+                            sigma=param_sigma_prior, 
+                            shape=x.shape[1])
+        if beta_dist == 'normal':
+            # Prior for the first quantile
+            beta = pm.Normal('b_0', mu=1, 
+                            sigma=param_sigma_prior, 
+                            shape=x.shape[1])
+        elif beta_dist == 'studentt':
+            beta = pm.StudentT('b_0', nu=2, mu=1, 
+                            sigma=param_sigma_prior, 
+                            shape=x.shape[1])
+        # Model error        
         sigma_eps = pm.HalfNormal('sigma_eps', 
                                   sigma=1.0, shape=x.shape[1])
 

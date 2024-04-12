@@ -3,7 +3,7 @@ import pandas as pd
 
 from pygeohydro import NWIS
 import pynhd as pynhd
-from methods.utils.contants import GEO_CRS
+from methods.utils.constants import GEO_CRS
 
 def get_comid_metadata_from_coords(coords):
     """Get the comid from coordinates.  

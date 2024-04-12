@@ -2,15 +2,95 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import matplotlib as mpl
 import seaborn as sns
+import geopandas as gpd
 
-from methods.utils.directories import fig_dir
+from methods.utils.directories import fig_dir, FIG_DIR
 from methods.diagnostics.metrics import group_metric_data_yearbin
 from .styles import model_colors, model_labels, metric_labels
 from .styles import lower_bound_metric_scores, upper_bound_metric_scores, ideal_metric_scores
 from .styles import ax_tick_label_fsize, ax_label_fsize, sup_title_fsize, legend_fsize
 from .styles import fig_dpi
+
+
+
+def plot_loo_bias_map(sites, obs_model_diff, fdc, 
+                      station_catchments, quantile, 
+                      model,
+                      unmanaged_gauge_meta, 
+                      save=False,
+                      bias_method = 3,
+                      color_label='Log-Flow Bias',
+                      sizeby_area=False,
+                      sizeby_flow=True):
+    """
+    Plot a map of the leave-one-out bias for a given method and FDC.
+    
+    Parameters
+    ----------
+    sites : list
+        List of sites to plot.
+    obs_model_diff : dict
+        Dictionary of bias values for each method and FDC.
+    fdc : pd.DataFrame
+        FDC data.
+    station_catchments : gpd.GeoDataFrame
+        Catchment data.
+    unmanaged_gauge_meta : pd.DataFrame
+        Metadata for the unmanaged gauges.
+    """
+    
+    assert(sizeby_area != sizeby_flow), "Only one of sizeby_area or sizeby_flow can be True."
+    
+    areas = station_catchments.loc[sites, 'area'].values*20
+    mean_flows = fdc['obs'].loc[:, quantile].values*20
+
+    biases = obs_model_diff[f'method_{bias_method}'][model].loc[:, quantile]
+    max_bias = max(biases)
+    min_bias = min(biases)
+
+
+    cmap = plt.get_cmap('RdBu')
+    norm = colors.TwoSlopeNorm(vmin=min_bias,
+                               vcenter=0, vmax=max_bias)
+
+    coords = gpd.points_from_xy(unmanaged_gauge_meta.loc[sites, 'long'],
+                       unmanaged_gauge_meta.loc[sites, 'lat'])
+
+
+    # Plot with bias as color
+    # Convert biases and coordinates to a GeoDataFrame
+    gdf = gpd.GeoDataFrame({'bias': biases, 'geometry': coords})
+
+    fig, ax = plt.subplots(figsize=(7,7))
+
+    # Set sizes
+    if sizeby_area:
+        gdf['size'] = areas
+    elif sizeby_flow:
+        gdf['size'] = mean_flows
+
+    # Plot the biases on the map
+    gdf.plot(ax=ax, column='bias', cmap=cmap, norm=norm, legend=True,
+                legend_kwds={'label': color_label},
+                markersize=gdf['size'], zorder=3)
+
+    ax.set_xlabel('Long.')
+    ax.set_ylabel('Lat.')
+
+    # colorbar label
+    colorbar = ax.get_figure().colorbar(ax.collections[0])
+    colorbar.set_label('Log-Flow Bias')
+    
+    plt.title(f'FDC Bias for {model} at Q{quantile:.2f}')
+
+    if save:
+        plt.savefig(f'{FIG_DIR}loo_bias_map_q{quantile}.png', dpi=300)
+    plt.show()
+    return
+
 
 def plot_error_slope_subplot(ax, model, metric, error_summary, sites,
                        plot_ensemble = False, 
@@ -73,8 +153,10 @@ def plot_error_slope_subplot(ax, model, metric, error_summary, sites,
                 norm_slope = ((slope - VMIN) / (VMAX - VMIN))
                 c = cmap(norm_slope)
                 ax.plot([0, 1], [mod_site_error, pub_mod_site_error], 
-                        color=c, alpha=line_alpha-0.3, lw=0.5, 
+                        color=c, alpha=0.4, lw=0.5, 
                         zorder=0)
+                
+            
  
     ax.set_ylim(YMIN, YMAX)
     ax.set_xlim(-0.2, 1.2)
@@ -134,20 +216,27 @@ def plot_error_cdf_subplot(ax, models, metric, error_summary,
                 ensemble_min = np.min(ensemble_ranks, axis=0)
                 ensemble_max = np.max(ensemble_ranks, axis=0)
                 ax.fill_between(np.linspace(0, 1, len(data_rank[f'{model}_0'])), ensemble_min, ensemble_max, 
-                                color=model_colors[model], alpha=0.3, zorder=2)
+                                color=model_colors[model], alpha=0.7, zorder=2)
         
         else:
             ax.plot(np.linspace(0, 1, len(data_rank[model])), data_rank[model],    
                     color=model_colors[model], 
                     label=model_labels[model],
-                    lw=3, zorder=3)
+                    lw=3, zorder=4)
         if plot_median:
             if 'ensemble' not in model:
                 
                 median_value= np.median(data_rank[model])
                 ax.scatter(0.5, median_value, color=model_colors[model], 
                            edgecolor='black', linewidth=1,
-                           marker="^", s=100, zorder = 5)                
+                           marker="^", s=100, zorder = 5)    
+            else:
+                median_values = np.zeros(len(realizations))
+                for i, real in enumerate(realizations):
+                    median_values[i] = np.median(data_rank[f'{model}_{real}'])
+                ax.scatter(0.5, np.median(median_values), color=model_colors[model], 
+                           edgecolor='black', linewidth=1,
+                           marker="^", s=100, zorder = 5)            
     
     if legend:
         ax.legend()
