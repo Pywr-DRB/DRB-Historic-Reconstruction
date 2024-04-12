@@ -1,3 +1,21 @@
+AGG_K_MIN = 1
+AGG_K_MAX = 8
+ENSEMBLE_K_MIN = 2
+ENSEMBLE_K_MAX = 10
+loo_models = []
+ensemble_methods = [1,2]
+### Get lists of filenames
+for nxm in ['nhmv10', 'nwmv21']:
+    
+    ## Different QPPQ aggregate models
+    for k in range(AGG_K_MIN, AGG_K_MAX):
+        loo_models.append(f'obs_pub_{nxm}_K{k}')
+        
+    ## Different QPPQ ensemble models
+    for k in range(ENSEMBLE_K_MIN, ENSEMBLE_K_MAX):
+        for e in ensemble_methods:
+            loo_models.append(f'obs_pub_{nxm}_K{k}_ensemble_m{e}')
+
 
 # Random
 fig_dpi = 300
@@ -23,7 +41,6 @@ model_colors = {
     'obs_pub_nwmv21_ObsScaled_ensemble': '#9CD2F6'
     }
 
-
 model_labels = {
     'obs': 'Observed',
     'nhmv10' : 'NHMv1.0',
@@ -38,6 +55,19 @@ model_labels = {
     'obs_pub_nwmv21_ObsScaled_ensemble':'PUB-NWM Ensemble'
     }
 
+
+for model in loo_models:
+    if model not in model_colors.keys():
+        model_colors[model] = 'black'
+    if model not in model_labels.keys():
+        model_labels[model] = model
+    if 'm2' in model:
+        model_colors[model] = 'blue'
+        model_labels[model] = model_labels[model] + ' (Method 2)'
+    if 'm1' in model:
+        model_labels[model] = model_labels[model] + ' (Method 1)'
+        
+        
 model_linewidths = {
     'obs': 2.5,
     'nhmv10' : 2,

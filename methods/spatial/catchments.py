@@ -39,7 +39,8 @@ def get_basin_data(fid, fsource):
     nldi = nhd.NLDI()
     try:
         basin_data = nldi.get_basins(fsource=fsource, 
-                                    feature_ids=fid)
+                                    feature_ids=fid,
+                                    split_catchment=True) # ensures the gauge is at the outlet of basin
         return basin_data
     except:
         print(f'No basin found for {fsource}: ', fid)

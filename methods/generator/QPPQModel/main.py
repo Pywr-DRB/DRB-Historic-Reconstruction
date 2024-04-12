@@ -35,7 +35,10 @@ class StreamflowGenerator():
         # Assign values
         self.Qobs = observed_flow
         self.observation_locations = observation_locations
-        self.K = K
+        
+        self.K = K   # Number of nearest neighbors to identify
+        
+        # self.K_sample
         
         ## Handle **kwargs
         # Check if an invalid kwarg was provided
@@ -99,7 +102,7 @@ class StreamflowGenerator():
         
         # # The bound_percentage will determine how much (+/- %) random flow 
         # # is sampled when NEP > fdc_quantiles[-1] or NEP < fdc_quantiles[0] 
-        bound_percentage = 0.01
+        # bound_percentage = 0.01
         # high_flow_bound = np.random.uniform(self.predicted_fdc[-1], 
         #                                     self.predicted_fdc[-1] + bound_percentage*self.predicted_fdc[-1])
         # low_flow_bound = np.random.uniform(self.predicted_fdc[0] - bound_percentage*self.predicted_fdc[0], 

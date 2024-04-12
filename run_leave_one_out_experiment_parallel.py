@@ -1,14 +1,13 @@
 """
-This script runs the leave-one-out experiment.
-
-First, unmanaged streamflow data is loaded, then a single gauge is removed from the dataset.
-The QPPQ method is used to reconstruct the streamflow at the removed gauge location.
-This is repeated for each gauge in the dataset.
+This script runs the leave-one-out experiment using myi4py to parallelize.
 """
+
 from mpi4py import MPI
 import pandas as pd
 import json
 import numpy as np
+import pickle
+import sys
 
 from methods.generator.single_site_generator import generate_single_gauge_reconstruction
 from methods.processing.hdf5 import export_ensemble_to_hdf5
@@ -17,6 +16,14 @@ from methods.utils.constants import cms_to_mgd
 from methods.processing.load import load_model_segment_flows, load_gauge_matches
 from methods.processing.prep_loo import get_leave_one_out_sites
 from methods.utils.directories import DATA_DIR, OUTPUT_DIR
+from methods.processing.hdf5 import combine_hdf5_files
+
+# MPI
+comm = MPI.COMM_WORLD
+size = comm.Get_size()
+rank = comm.Get_rank()
+
+DONOR_FLOW = sys.argv[1]
 
 def leave_one_out_prediction_mpi(model_streamflows, 
                                  model_gauge_matches, 
@@ -44,11 +51,6 @@ def leave_one_out_prediction_mpi(model_streamflows,
         end_year (int, optional): End year of prediction. Defaults to 2020.
     """
     
-    # MPI setup
-    comm = MPI.COMM_WORLD
-    size = comm.Get_size()
-    rank = comm.Get_rank()
-
     # Distribute rows to processes
     if rank == 0:
         # Split the gauge matches DataFrame and distribute it
@@ -71,13 +73,27 @@ def leave_one_out_prediction_mpi(model_streamflows,
         local_results.append(result)
 
     # Gather the results from all processes
-    all_results = comm.gather(local_results, root=0)
+    # pickle to make data size more managable
+    pickled_local_results = [pickle.dumps(result[1]) for result in local_results]
+    local_station_ids = [result[0] for result in local_results]
+    
+    all_pickled_results = comm.gather(pickled_local_results, root=0)
+    all_station_ids = comm.gather(local_station_ids, root=0)
 
     if rank == 0:
-        # Flatten the results and process them
-        flat_results = [item for sublist in all_results for item in sublist]
-
-
+        # de-pickle after gathering
+        all_results = [pickle.loads(pickled_result) 
+                        for sublist in all_pickled_results
+                        for pickled_result in sublist]
+        all_ids = [id for sublist in all_station_ids for id in sublist]
+        
+        print(f'length of all_results {len(all_results)}')
+        print(f'length of all_station_ids {len(all_ids)}')
+        
+        
+        flat_results = [(all_ids[i], all_results[i]) for i in range(len(all_results))]
+        
+        
         ##############
         ### Export ###
         ##############
@@ -160,21 +176,23 @@ def predict_single_gauge(row,
     n_zeros = (fdc_prediction == 0).sum()
     n_negatives = (fdc_prediction < 0).sum()
     if n_zeros > 0:
-        print(f'Warning: fdc_prediction has {n_zeros} zeros for gauge {test_station_no}.')
+        warn = f'Warning: fdc_prediction has {n_zeros} zeros for gauge {test_station_no}.'
+        print(warn)
     if n_negatives > 0:
-        print(f'Warning: fdc_prediction has {n_negatives} negatives for gauge {test_station_no}.')
+        warn = f'Warning: fdc_prediction has {n_negatives} negatives for gauge {test_station_no}.'
+        print(warn)
                 
     ## Remove upstream sites from unmanaged flows and metadata
     # We don't want to cheat by using upstream sites with correlation 1 with the test site
     # Thanks Stedinger!
+    unmanaged_gauge_flows_subset = unmanaged_gauge_flows.copy()
+    unmanaged_gauge_meta_subset = unmanaged_gauge_meta.copy()
+    
     if len(test_subcatchment_stations) > 0:
         for up_station in test_subcatchment_stations:
             if up_station in unmanaged_gauge_flows.columns:
-                unmanaged_gauge_flows_subset = unmanaged_gauge_flows.drop(columns=up_station, inplace=False)
-                unmanaged_gauge_meta_subset = unmanaged_gauge_meta.drop(index=up_station, inplace=False)
-    else:
-        unmanaged_gauge_flows_subset = unmanaged_gauge_flows.copy()
-        unmanaged_gauge_meta_subset = unmanaged_gauge_meta.copy()
+                unmanaged_gauge_flows_subset = unmanaged_gauge_flows_subset.drop(columns=up_station, inplace=False)
+                unmanaged_gauge_meta_subset = unmanaged_gauge_meta_subset.drop(index=up_station, inplace=False)    
                 
     ### Predict ###
     Q_hat = generate_single_gauge_reconstruction(station_id= test_station_no,
@@ -189,16 +207,22 @@ def predict_single_gauge(row,
             
     ### clean up ###
     if n_realizations == 1:
+        Q_hat= Q_hat.values.flatten()
         assert(Q_hat.shape[0] == len(datetime_index)), 'Q_hat and datetime_index must be the same length.'
+    
     else:        
         assert(Q_hat['realization_1'].shape[0] == len(datetime_index)), f'Q_hat and datetime_index must be the same length but have sizes {Q_hat["realization_1"].shape} and {len(datetime_index)}.'
         
-    return Q_hat
+    return (station_id, Q_hat)
 
 
+##############################################################################
+##############################################################################
+##############################################################################
 
 ## Relevant paths
-path_to_nhm_data = '../NHM-Data-Retrieval/datasets/NHMv10/'
+path_to_nhm_data = '../Input-Data-Retrieval/datasets/NHMv10/'
+
 
 # Restrict to DRB or broader region
 filter_drb = True
@@ -289,12 +313,10 @@ for n in loo_gauge_matches['nhmv10']['n_upstream_sites'].unique():
                 if row_downstream > row_upstream:
                     sites_with_n_upstream.loc[up_site], sites_with_n_upstream.loc[site_no] = sites_with_n_upstream.loc[up_site].copy(), sites_with_n_upstream.loc[site_no].copy()
                     break
-                
-    loo_gauge_matches['nhmv10'].loc[sites_with_n_upstream.index, :] = sites_with_n_upstream
-    loo_gauge_matches['nwmv21'].loc[sites_with_n_upstream.index, :] = sites_with_n_upstream
 
-loo_gauge_matches['nhmv10'].reset_index(drop=False, inplace=True)
-loo_gauge_matches['nwmv21'].reset_index(drop=False, inplace=True)
+for model in ['nhmv10', 'nwmv21']:
+    loo_gauge_matches[model].loc[sites_with_n_upstream.index, :] = sites_with_n_upstream
+    loo_gauge_matches[model].reset_index(drop=False, inplace=True)
 
 # overwrite gauge matches 
 gauge_matches = loo_gauge_matches
@@ -308,14 +330,80 @@ AGG_K_MIN = 1
 AGG_K_MAX = 7
 
 ENSEMBLE_K_MIN = 2
-ENSEMBLE_K_MAX = 10
-N_ENSEMBLE = 300
+ENSEMBLE_K_MAX = 11
+N_ENSEMBLE = 10
+N_ENSEMBLE_SET = 5
+N_SETS = N_ENSEMBLE // N_ENSEMBLE_SET
 
-START_YEAR = 1945 # 1945
+START_YEAR = 2018 # 1945
 END_YEAR = 2021
 
 MARGINAL_FLOW_PREDICTION = False
 
+
 # Add USGS-{} to column names
 unmanaged_gauge_flows.columns = [f'USGS-{c}' for c in unmanaged_gauge_flows.columns]
 
+
+## Loop through model FDC estimates
+for DONOR_FLOW in ['nhmv10']:
+    
+    # Initialize variables that are copied for each process
+    if DONOR_FLOW == 'nhmv10':
+        model_streamflows = drb_nhm_segment_flows.copy()
+        model_gauge_matches = gauge_matches['nhmv10'].copy()
+    elif DONOR_FLOW == 'nwmv21':
+        model_streamflows = drb_nwm_segment_flows.copy()
+        model_gauge_matches = gauge_matches['nwmv21'].copy()
+    
+    ## Aggregage QPPQ
+    ## Loop through K values
+    """
+    for K in range(AGG_K_MIN, AGG_K_MAX):
+        if rank == 0:
+            print(f'Generating {DONOR_FLOW} based predictions with K={K} and 1 realizations')
+        output_filename = f'{OUTPUT_DIR}/LOO/loo_reconstruction_{DONOR_FLOW}_K{K}'
+        
+        leave_one_out_prediction_mpi(model_streamflows=model_streamflows, 
+                                     model_gauge_matches=model_gauge_matches, 
+                                     unmanaged_gauge_flows=unmanaged_gauge_flows,
+                                     unmanaged_gauge_meta=unmanaged_gauge_meta,
+                                     K=K,
+                                     output_filename=output_filename,
+                                     gauge_subcatchments=loo_station_upstream_gauges,
+                                     n_realizations=1,
+                                     start_year=START_YEAR,
+                                     end_year=END_YEAR,
+                                     marginal_flow_prediction=MARGINAL_FLOW_PREDICTION)
+    """
+                                     
+    ## Ensemble QPPQ
+    ## Loop through K values
+    for K in range(ENSEMBLE_K_MIN, ENSEMBLE_K_MAX):
+        if rank == 0:
+            print(f'Generating {DONOR_FLOW} based predictions with K={K} and {N_ENSEMBLE} realizations')
+        
+        # Memory issues arise when ensemble size is too large
+        # Instead, run N sets of 100 realizations and combine after
+        ensemble_set_filenames = []
+        for set in range(N_SETS):      
+            output_filename = f'{OUTPUT_DIR}/LOO/set{set}_loo_reconstruction_{DONOR_FLOW}_K{K}'
+            ensemble_set_filenames.append(output_filename)
+            
+            leave_one_out_prediction_mpi(model_streamflows=model_streamflows, 
+                                     model_gauge_matches=model_gauge_matches, 
+                                     unmanaged_gauge_flows=unmanaged_gauge_flows,
+                                     unmanaged_gauge_meta=unmanaged_gauge_meta,
+                                     K=K,
+                                     output_filename=output_filename,
+                                     gauge_subcatchments=loo_station_upstream_gauges,
+                                     n_realizations=N_ENSEMBLE_SET,
+                                     start_year=START_YEAR,
+                                     end_year=END_YEAR,
+                                     marginal_flow_prediction=MARGINAL_FLOW_PREDICTION)
+
+        ### Combine ensemble sets into a single file
+        output_filename = f'{OUTPUT_DIR}/LOO/loo_reconstruction_{DONOR_FLOW}_K{K}'
+        combine_hdf5_files(ensemble_set_filenames, output_filename)
+
+print('DONE!')
