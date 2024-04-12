@@ -2,6 +2,7 @@ import h5py
 import pandas as pd
 
 
+
 def export_ensemble_to_hdf5(dict, output_file):
     
     dict_keys = list(dict.keys())
@@ -134,6 +135,8 @@ def extract_loo_results_from_hdf5(hdf5_file):
             ensemble_flows[site_number] = df
 
     return ensemble_flows
+    
+    
 
 
 def combine_hdf5_files(files, output_file):
@@ -144,10 +147,16 @@ def combine_hdf5_files(files, output_file):
     The function assumes that all files have the same structure.
     """    
     assert(type(files) == list), 'Input must be a list of file paths'
+    
+    output_file = output_file + '.hdf5' if ('.hdf' not in output_file) else output_file
+    
     # Extract all
     results_dict ={}
     for i, f in enumerate(files):
-         results_dict[i] = extract_loo_results_from_hdf5(f)
+        if '.' not in f:
+            f = f + '.hdf5'
+        assert(f[-5:] == '.hdf5'), f'Filename {f} must end in .hdf5'
+        results_dict[i] = extract_loo_results_from_hdf5(f)
 
     # Combine all data
     # Each item in the results_dict has site_number as key and dataframe as values.
@@ -163,7 +172,7 @@ def combine_hdf5_files(files, output_file):
                 combined_results[site] = results_dict[i][site]
 
     # Reset the column names so that there are no duplicates
-    n_realizations = len(combined_results.values()[0].columns)
+    n_realizations = len(combined_results[site].columns)
     combined_column_names = [f'realization_{i}' for i in range(n_realizations)]
     for site in combined_results:
         assert len(combined_results[site].columns) == n_realizations, f'Number of realizations is not consistent for site {site}'

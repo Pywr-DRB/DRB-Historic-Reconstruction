@@ -3,11 +3,6 @@ Trevor Amestoy
 Cornell University
 Fall 2022
 
-The function IDW_generator takes:
-- A set of observed flow timeseries
-- FDC at a target site
-- The locations (lat, long) of the observed sites
-- The location (lat, long) of the target site
 
 
 And performs an inverse-distance weighted prediction of flow timeseries at the
@@ -35,14 +30,12 @@ class StreamflowGenerator():
         # Assign values
         self.Qobs = observed_flow
         self.observation_locations = observation_locations
-        
-        self.K = K   # Number of nearest neighbors to identify
-        
-        # self.K_sample
+        self.K = K
         
         ## Handle **kwargs
         # Check if an invalid kwarg was provided
         self.valid_kwargs = ['square_IDW', 'return_all', 'probabalistic_sample',
+                              'probabalistic_aggregate',
                              'log_fdc_interpolation', 
                              'fdc_quantiles', 'remove_zero_flow', 
                              'full_observed_flow']
@@ -58,8 +51,10 @@ class StreamflowGenerator():
         self.return_all = kwargs.get('return_all', False)
         self.qs = kwargs.get('fdc_quantiles', default_quantiles)
         self.probabalistic_sample = kwargs.get('probabalistic_sample', False)
+        self.probabalistic_aggregate = kwargs.get('probabalistic_aggregate', False)
         self.remove_zero_flow_sites = kwargs.get('remove_zero_flow', True)
         self.full_observed_flow = kwargs.get('full_observed_flow', self.Qobs.copy())
+        
         
 
     def get_KNN(self):
@@ -102,7 +97,7 @@ class StreamflowGenerator():
         
         # # The bound_percentage will determine how much (+/- %) random flow 
         # # is sampled when NEP > fdc_quantiles[-1] or NEP < fdc_quantiles[0] 
-        # bound_percentage = 0.01
+        bound_percentage = 0.01
         # high_flow_bound = np.random.uniform(self.predicted_fdc[-1], 
         #                                     self.predicted_fdc[-1] + bound_percentage*self.predicted_fdc[-1])
         # low_flow_bound = np.random.uniform(self.predicted_fdc[0] - bound_percentage*self.predicted_fdc[0], 
@@ -171,28 +166,55 @@ class StreamflowGenerator():
         self.norm_wts = self.wts/np.sum(self.wts)
 
         ### Make predictions
+        
+        ## Probabilistic sample: Sample from KNN sites based on distance
         if self.probabalistic_sample:
             
+            sample_size = self.K if self.probabalistic_aggregate else 1
+            
             # Probabilitically sample one of the K locations
-            sample_site_id = np.random.choice(self.KNN_site_ids, p=self.norm_wts)
+            sample_site_id = np.random.choice(self.KNN_site_ids, p=self.norm_wts, size = sample_size, replace=True)
             
-            # Find the flow timeseries from the sampled site
-            donor_flow_timeseries = self.Qobs.loc[:, sample_site_id].values
-            
-            # Replace zeros and/or nans with nearest non-zero value
-            donor_flow_timeseries[donor_flow_timeseries <= 0] = np.nan
-            donor_flow_timeseries = pd.Series(donor_flow_timeseries).interpolate(method='nearest').values
-            
-            # Find the NEP timeseries from the sampled site
-            self.observed_nep_timeseries = self.streamflow_to_nonexceedance(donor_flow_timeseries,
-                                                                             self.full_observed_flow.loc[:, sample_site_id].dropna().values)
 
-            self.observed_nep_timeseries[self.observed_nep_timeseries <= 0] = np.nan
-            self.observed_nep_timeseries = pd.Series(self.observed_nep_timeseries).interpolate(method='nearest').values
+            if self.probabalistic_aggregate:
+                self.observed_nep_timeseries = np.zeros((self.T, self.K))
+                
+                # Store a copy of each, so that we don't need to re-calculate the same site twice
+                sample_site_neps = {}
+                for i, site_id in enumerate(sample_site_id):
+                    
+                    # If already calculated, use that same timeseries
+                    if site_id in sample_site_neps.keys():
+                        self.observed_nep_timeseries[:, i] = sample_site_neps[site_id]
+                        
+                    # Else calculate NEPs
+                    else:
+                        sample_site_neps[site_id] = self.streamflow_to_nonexceedance(self.Qobs.loc[:, site_id].values,
+                                                                                              self.full_observed_flow.loc[:, site_id].dropna().values)
+                        self.observed_nep_timeseries[:, i] = sample_site_neps[site_id]
+                
+                # Predicted NEP is mean of observed NEP timeseries
+                self.predicted_nep_timeseries = self.observed_nep_timeseries.mean(axis=1)            
+
+            else:
+                # Find the flow timeseries from the sampled site
+                donor_flow_timeseries = self.Qobs.loc[:, sample_site_id].values.flatten()
+                
+                # Replace zeros and/or nans with nearest non-zero value
+                donor_flow_timeseries[donor_flow_timeseries <= 0] = np.nan
+                donor_flow_timeseries = pd.Series(donor_flow_timeseries).interpolate(method='nearest').values
+                
+                # Find the NEP timeseries from the sampled site
+                self.observed_nep_timeseries = self.streamflow_to_nonexceedance(donor_flow_timeseries,
+                                                                                 self.full_observed_flow.loc[:, sample_site_id].dropna().values)
+    
+                self.observed_nep_timeseries[self.observed_nep_timeseries <= 0] = np.nan
+                self.observed_nep_timeseries = pd.Series(self.observed_nep_timeseries).interpolate(method='nearest').values
             
-            # Convert NEP to flow timeseries
-            self.predicted_flow = self.nonexceedance_to_streamflow(self.observed_nep_timeseries)
-            
+                # Predicted NEP is exactly observed NEP at single site
+                self.predicted_nep_timeseries = self.observed_nep_timeseries.copy()
+                            
+        ## Simple aggregate: Weighted mean of KNN sites
         else:
             # Create timeseries of NEPs
             self.observed_nep_timeseries = np.zeros((self.T, self.K))
@@ -201,13 +223,15 @@ class StreamflowGenerator():
                 self.observed_nep_timeseries[:, i] = self.streamflow_to_nonexceedance(self.Qobs.loc[:, site_id].values,
                                                                                       self.full_observed_flow.loc[:, site_id].dropna().values)
 
-            # Calculated predicted NEP using IDW weights
+            # Predicted NEP is made using IDW weighting of all sites
             self.weighted_nep_timeseries = np.multiply(self.observed_nep_timeseries, self.norm_wts.flatten())
             self.predicted_nep_timeseries = np.sum(self.weighted_nep_timeseries, axis=1)
 
-            ## Convert from NEP to flow
-            self.predicted_flow = self.nonexceedance_to_streamflow(self.predicted_nep_timeseries)        
-        
+
+        #######################################
+        ### Convert from predicted NEP to flow
+        self.predicted_flow = self.nonexceedance_to_streamflow(self.predicted_nep_timeseries)        
+    
         # Convert log-flow to flow if needed
         if self.log_fdc_interpolation:
             self.predicted_flow = np.exp(self.predicted_flow)
