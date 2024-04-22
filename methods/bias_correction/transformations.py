@@ -13,6 +13,22 @@ bias_method_labels = {
     'method_8': '% Log Difference per Area'
 }
 
+def empirical_cdf(data, quantiles):
+    """Applies the empirical CDF transformation to each column of the data."""
+    N,M = data.shape
+    for i in range(M):
+        # drop na from column 
+        y = data[:,i][~np.isnan(data[:,i])]
+        y = y[y>0]
+        cdf_y = np.quantile(y, quantiles).astype(float)
+         
+        if i == 0:
+            cdf = cdf_y
+        else:
+            cdf = np.vstack((cdf, cdf_y))
+    return cdf
+
+
 def calculate_quantile_biases(X_observed, X_modeled, method, area=None,
                               precip_observation=False):
     """
