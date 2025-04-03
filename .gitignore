@@ -18,7 +18,8 @@ data/NWMv21/*
 *.hdf5
 
 ./archive/*
-./notebooks/*
+notebooks/*
 
 ./outputs/*
+./pywrdrb_inputs/*.hdf5
 ./pywrdrb_outputs/
