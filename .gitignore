@@ -26,9 +26,11 @@ data/NWMv21/*
 notebooks/*
 
 
-./data/DRB_spatial/*
+/data/DRB_spatial/*
 
-
+/figures/
+!/figures/manuscript_figures/
+!/figures/si_figures/
 
 ./outputs/*
 ./pywrdrb_inputs/*.hdf5
