@@ -34,4 +34,3 @@ notebooks/*
 
 ./outputs/*
 ./pywrdrb_inputs/*.hdf5
-./pywrdrb_outputs/
