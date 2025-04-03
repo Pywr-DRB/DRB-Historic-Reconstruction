@@ -1,9 +1,54 @@
 import h5py
 import pandas as pd
 
+from pywrdrb_node_data import obs_site_matches
+
+pywrdrb_all_nodes = list(obs_site_matches.keys())
 
 
-def export_ensemble_to_hdf5(dict, output_file):
+class HDF5DataManager:
+    def __init__(self):
+        pass
+    
+    def export_ensemble_to_hdf5(self,
+                                dict,
+                                output_filename):
+        pass
+    
+    def extract_realization_from_hdf5(self,
+                                    hdf5_file,
+                                    realization,
+                                    stored_by_node=False):
+        pass
+    
+    def get_realization_numbers(self, 
+                                filename):
+        pass
+    
+    def combine_hdf5_files(self,
+                           filenames,
+                           output_filename):
+        pass
+    
+    def extract_loo_results_from_hdf5(self,
+                                      filename):
+        pass
+                           
+
+
+def export_ensemble_to_hdf5(dict, 
+                            output_file):
+    """
+    Export a dictionary of ensemble data to an HDF5 file.
+    Data is stored in the dictionary as {realization number (int): pd.DataFrame}.
+    
+    Args:
+        dict (dict): A dictionary of ensemble data.
+        output_file (str): Full output file path & name to write HDF5.
+        
+    Returns:
+        None    
+    """
     
     dict_keys = list(dict.keys())
     N = len(dict)
@@ -27,80 +72,14 @@ def export_ensemble_to_hdf5(dict, output_file):
             for j in range(M):
                 dataset = grp.create_dataset(column_labels[j], 
                                              data=data[column_labels[j]].to_list())
-        # close file
-        f.close()
     return
 
 
 
 
-def extract_realization_from_hdf5(hdf5_file, realization, nodes = None,
-                                  keyby_realization = False):
-    
-    if not keyby_realization:
-        assert(nodes is not None), 'Must provide nodes if keyby_realization is True'
-    
-    with h5py.File(hdf5_file, 'r') as f:
-        
-        if keyby_realization:
-            group = f[f"realization_{realization}"]
-            
-            # Extract column labels
-            column_labels = group.attrs['column_labels']
-            
-            # Extract timeseries data for each location
-            data = {}
-            for label in column_labels:
-                dataset = group[label]
-                data[label] = dataset[:]
-            
-            # Get date indices
-            dates = group['date'][:].tolist()
-        else:
-            data={}
-            for n in nodes:
-                group = f[n]
-                dataset = group[f'realization_{realization}']
-                data[n] = dataset[:]
-                
-            # Get date indices
-            dates = group['date'][:].tolist()  
-            
-    # Combine into dataframe
-    df = pd.DataFrame(data, index = dates)
-    df.index = pd.to_datetime(df.index.astype(str))
-    # Close file
-    f.close()
-    return df
 
 
-def get_hdf5_realization_numbers(filename):
-    """Checks the contents of an hdf5 file, and returns a list 
-    of the realization ID numbers contained.
-    Realizations have key 'realization_i' in the HDF5.
 
-    Args:
-        filename (str): The HDF5 file of interest
-
-    Returns:
-        list: Containing realizations ID numbers; realizations have key 'realization_i' in the HDF5.
-    """
-    realization_numbers = []
-    with h5py.File(filename, 'r') as file:
-        # Get the keys in the HDF5 file
-        keys = list(file.keys())
-
-        # Get the df using a specific node key
-        node_data = file[keys[0]]
-        column_labels = node_data.attrs['column_labels']
-        
-        # Iterate over the columns and extract the realization numbers
-        for col in column_labels:
-            if col.startswith('realization_'):
-                # Extract the realization number from the key
-                realization_number = int(col.split('_')[1])
-                realization_numbers.append(realization_number)
-    return realization_numbers
 
 def extract_loo_results_from_hdf5(hdf5_file):
     with h5py.File(hdf5_file, 'r') as f:
@@ -160,8 +139,7 @@ def combine_hdf5_files(files, output_file):
 
     # Combine all data
     # Each item in the results_dict has site_number as key and dataframe as values.
-    # Columns of df are 'realization_i'
-    # We want to combine all dataframes into a single dataframe with columns 'realization_i_1', 'realization_i_2', etc.
+    # We want to combine all dataframes into a single dataframe with columns corresponding to realization numbers
     combined_results = {}
     combined_column_names = []
     for i in results_dict:
@@ -172,12 +150,108 @@ def combine_hdf5_files(files, output_file):
                 combined_results[site] = results_dict[i][site]
 
     # Reset the column names so that there are no duplicates
-    n_realizations = len(combined_results[site].columns)
-    combined_column_names = [f'realization_{i}' for i in range(n_realizations)]
-    for site in combined_results:
+    all_sites = list(combined_results.keys())
+    n_realizations = len(combined_results[all_sites[0]].columns)
+    combined_column_names = [str(i) for i in range(n_realizations)]
+    for site in all_sites:
         assert len(combined_results[site].columns) == n_realizations, f'Number of realizations is not consistent for site {site}'
         combined_results[site].columns = combined_column_names
     
     # Write to file
     export_ensemble_to_hdf5(combined_results, output_file)        
     return
+
+
+
+
+def get_hdf5_realization_numbers(filename):
+    """
+    Checks the contents of an hdf5 file, and returns a list 
+    of the realization ID numbers contained.
+    Realizations have key 'realization_i' in the HDF5.
+
+    Args:
+        filename (str): The HDF5 file of interest
+
+    Returns:
+        list: Containing realizations ID numbers; realizations have key 'realization_i' in the HDF5.
+    """
+    realization_numbers = []
+    with h5py.File(filename, 'r') as file:
+        # Get the keys in the HDF5 file
+        keys = list(file.keys())
+
+        # Get the df using a specific node key
+        node_data = file[keys[0]]
+        column_labels = node_data.attrs['column_labels']
+        
+        # Iterate over the columns and extract the realization numbers
+        for col in column_labels:
+            
+            # handle different types of column labels
+            if type(col) == str:
+                if col.startswith('realization_'):
+                    # Extract the realization number from the key
+                    realization_numbers.append(int(col.split('_')[1]))
+                else:
+                    realization_numbers.append(col)
+            elif type(col) == int:
+                realization_numbers.append(col)
+            else:
+                err_msg = f'Unexpected type {type(col)} for column label {col}.'
+                err_msg +=  f'in HDF5 file {filename}'
+                raise ValueError(err_msg)
+    return realization_numbers
+
+
+def extract_realization_from_hdf5(hdf5_file, 
+                                  realization,
+                                  stored_by_node=False):
+    """
+    Pull a single inflow realization from an HDF5 file of inflows. 
+
+    Args:
+        hdf5_file (str): The filename for the hdf5 file
+        realization (int): Integer realization index
+        stored_by_node (bool): Whether the data is stored with node name as key.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the realization
+    """
+    
+    with h5py.File(hdf5_file, 'r') as f:
+        if stored_by_node:
+            # Extract timeseries data from realization for each node
+            data = {}
+                
+            for node in pywrdrb_all_nodes:
+                node_data = f[node]
+                column_labels = node_data.attrs['column_labels']
+                
+                err_msg = f'The specified realization {realization} is not available in the HDF file.'
+                assert(realization in column_labels), err_msg + f' Realizations available: {column_labels}'
+                data[node] = node_data[realization][:]
+            
+            dates = node_data['date'][:].tolist()
+            
+        else:
+            realization_group = f[realization]
+            
+            # Extract column labels
+            column_labels = realization_group.attrs['column_labels']
+            # Extract timeseries data for each location
+            data = {}
+            for label in column_labels:
+                dataset = realization_group[label]
+                data[label] = dataset[:]
+            
+            # Get date indices
+            dates = realization_group['date'][:].tolist()
+        data['datetime'] = dates
+        
+    # Combine into dataframe
+    df = pd.DataFrame(data, index = dates)
+    df.index = pd.to_datetime(df.index.astype(str))
+    return df
+
+

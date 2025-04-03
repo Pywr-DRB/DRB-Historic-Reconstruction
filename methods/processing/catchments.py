@@ -30,9 +30,13 @@ def get_basin_catchment_area(feature_id, feature_source='comid'):
 
 def load_station_catchments(crs = GEO_CRS,
                             boundary='drb',
+                            pywrdrb = False,
                             marginal = False):
     # catchment geometry
-    geom_file = f'{boundary}_station_catchments.shp' if not marginal else f'{boundary}_station_marginal_catchments.shp'
+    if pywrdrb:
+        geom_file = f'{boundary}_pywrdrb_node_catchments.shp' if not marginal else f'{boundary}_station_marginal_catchments.shp'
+    else:
+        geom_file = f'{boundary}_station_catchments.shp' if not marginal else f'{boundary}_station_marginal_catchments.shp'
     geom_file = f'{DATA_DIR}/NHD/' + geom_file
     
     station_catchments = gpd.read_file(geom_file,

@@ -4,8 +4,11 @@ import pandas as pd
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
+from methods.load.data_loader import Data
+
 from methods.utils import FIG_DIR
 from methods.utils.constants import cms_to_mgd
+from methods.utils.directories import OUTPUT_DIR, PYWRDRB_DIR, DATA_DIR
 
 # Dict of different gauge/HRU IDs for different datasets
 scaling_site_matches = {'cannonsville':{'nhmv10_gauges': ['1556'],   # '1559' matches '0142400103' but is not used (see lower comment)
@@ -55,51 +58,24 @@ def prep_inflow_scaling_data():
         pd.DataFrame: Dataframe with inflows for each reservoir and dataset.
     """
 
-    # Load observed, NHM, and NWM flow
-    ## USGS
-    obs_flows = pd.read_csv(f'{OUTPUT_DIR}/USGS/streamflow_daily_usgs_1950_2022_cms.csv', 
-                            index_col=0, parse_dates=True)*cms_to_mgd
-    usgs_gauge_ids = [c.split('-')[1] for c in obs_flows.columns]
-    obs_flows.columns = usgs_gauge_ids
-    obs_flows.index = pd.to_datetime(obs_flows.index.date)
+    data_loader = Data()
 
+    ## Load observed, NHM, and NWM flow
+    # USGS
+    obs_flows = data_loader.load(datatype='streamflow', sitetype='usgs', flowtype='obs')
+    obs_flows = obs_flows.loc['1983-10-01':, :]
+    
+    
     # Metadata: USGS site number, longitude, latitude, comid, etc.
-    unmanaged_gauge_meta = pd.read_csv(f'{OUTPUT_DIR}/USGS/drb_unmanaged_usgs_metadata.csv', sep = ',', 
-                                    dtype = {'site_no':str})
+    unmanaged_gauge_meta = data_loader.load(datatype='metadata', sitetype='unmanaged')
     unmanaged_gauge_meta.set_index('site_no', inplace=True)
+
 
     ## NHM
     # Streamflow
-    nhmv10_flows = pd.read_csv(f'{PYWDRB_DIR}/input_data/modeled_gages/streamflow_daily_nhmv10_mgd.csv', 
+    nhmv10_flows = pd.read_csv(f'{DATA_DIR}/NHMv10/csv/streamflow_daily_nhmv10_mgd.csv', 
                             index_col=0, parse_dates=True)
     nhmv10_flows = nhmv10_flows.loc['1983-10-01':, :]
-
-
-    ## NWMv2.1
-    # modeled gauge flows
-    nwm_gauge_flows = pd.read_csv(f'{OUTPUT_DIR}/NWMv21/nwmv21_unmanaged_gauge_streamflow_daily_mgd.csv', 
-                                        sep = ',', index_col=0, parse_dates=True)
-    nwm_gauge_flows= nwm_gauge_flows.loc['1983-10-01':, :]
-
-
-    # Metadata
-    nwm_gauge_meta = pd.read_csv(f'{OUTPUT_DIR}/NWMv21/nwmv21_unmanaged_gauge_metadata.csv', 
-                                        sep = ',', 
-                                        dtype={'site_no':str, 'comid':str})
-    # Replace nwm reachcodes with gauge ids
-    for reachcode in nwm_gauge_flows.columns:
-        if reachcode in nwm_gauge_meta['comid'].values:
-            site_no = nwm_gauge_meta.loc[nwm_gauge_meta['comid'] == reachcode, 'site_no'].values[0]
-            nwm_gauge_flows.rename(columns={reachcode:site_no}, 
-                                   inplace=True)
-
-    # modeled lake inflows and segment flows
-    nwm_lake_inflows = pd.read_csv(f'{PYWDRB_DIR}/input_data/modeled_gages/streamflow_daily_nwmv21_mgd.csv', 
-                                        index_col=0, parse_dates=True)
-    nwm_lake_inflows = nwm_lake_inflows.loc['1983-10-01':, :]
-    
-    # Combine NWM data
-    nwmv21_flows = pd.concat([nwm_gauge_flows, nwm_lake_inflows], axis=1)
 
 
     # Compile data for each reservoir in df
@@ -111,7 +87,7 @@ def prep_inflow_scaling_data():
             elif 'obs' in flowtype:
                 data[f'{node}_{flowtype}'] = obs_flows[ids].sum(axis=1)
             elif 'nwm' in flowtype:
-                data[f'{node}_{flowtype}'] = nwmv21_flows[ids].sum(axis=1)
+                continue
                 
     return data
 
@@ -208,7 +184,7 @@ def generate_scaled_inflows(start_date, end_date,
     """
 
     # Load historic USGS obs
-    Q_obs = pd.read_csv(f'{OUTPUT_DIR}USGS/streamflow_daily_usgs_1950_2022_cms.csv',
+    Q_obs = pd.read_csv(f'{DATA_DIR}USGS/drb_streamflow_daily_usgs_cms.csv',
                                     index_col=0, parse_dates=True)*cms_to_mgd
     if '-' in Q_obs.columns[0]:
         usgs_gauge_ids = [c.split('-')[1] for c in Q_obs.columns]
@@ -256,12 +232,12 @@ def generate_scaled_inflows(start_date, end_date,
 
     Q_obs_scaled = Q_obs_scaled.loc[start_date:end_date, scaled_reservoirs]    
     # Export
-    if export:
-        Q_obs_scaled.to_csv(f'{OUTPUT_DIR}/Hybrid/scaled_inflows_{donor_model}.csv', sep=',')
-        Q_obs_scaled.to_csv(f'{PYWDRB_DIR}/input_data/scaled_inflows/scaled_inflows_{donor_model}.csv', sep=',')
-        return Q_obs_scaled
-    else:
-        return Q_obs_scaled 
+    # if export:
+    #     Q_obs_scaled.to_csv(f'{OUTPUT_DIR}/Hybrid/scaled_inflows_{donor_model}.csv', sep=',')
+    #     Q_obs_scaled.to_csv(f'{PYWRDRB_DIR}/input_data/scaled_inflows/scaled_inflows_{donor_model}.csv', sep=',')
+    #     return Q_obs_scaled
+    # else:
+    #     return Q_obs_scaled 
 
 
 
@@ -342,10 +318,3 @@ if __name__ == '__main__':
                                 donor_model='nhmv10',
                                 export=export_scaled_inflows)
         plot_inflow_scaling_regression(donor_model = 'nhmv10', roll_window = rolling_mean_window)
-
-
-        generate_scaled_inflows(start_date='1983-10-01', end_date='2020-12-31', 
-                                scaling_rolling_window=rolling_mean_window, 
-                                donor_model='nwmv21',
-                                export=export_scaled_inflows)
-        plot_inflow_scaling_regression(donor_model = 'nwmv21', roll_window = rolling_mean_window)

@@ -29,6 +29,7 @@ def empirical_cdf(data, quantiles):
     return cdf
 
 
+
 def calculate_quantile_biases(X_observed, X_modeled, method, area=None,
                               precip_observation=False):
     """
@@ -53,28 +54,30 @@ def calculate_quantile_biases(X_observed, X_modeled, method, area=None,
     if method == 1:
         return X_modeled - X_observed
     elif method == 2:
-        return (X_modeled - X_observed) / X_observed
+        return (X_modeled - X_observed) / X_observed *100
     elif method == 3:
         return np.log(X_modeled) - np.log(X_observed)
     elif method == 4:
-        return (np.log(X_modeled) - np.log(X_observed)) / np.log(X_observed)
+        return (np.log(X_modeled) - np.log(X_observed)) / np.log(X_observed) * 100
     elif method == 5:
         diff = X_modeled - X_observed
         return diff.divide(A, axis=0)
     elif method == 6:
-        return (X_modeled - X_observed) / (X_observed.multiply(A, axis=0))
+        return (X_modeled - X_observed) / (X_observed.multiply(A, axis=0)) * 100
     elif method == 7:
         return np.log(X_modeled.divide(A, axis=0)) - np.log(X_observed.divide(A, axis=0))
     elif method == 8:
-        return (np.log(X_modeled.divide(A, axis=0)) - np.log(X_observed.divide(A, axis=0))) / np.log(X_observed.divide(A, axis=0))
+        return (np.log(X_modeled.divide(A, axis=0)) - np.log(X_observed.divide(A, axis=0))) / np.log(X_observed.divide(A, axis=0)) * 100
     elif method == 9:
         return np.log(X_modeled - X_observed)
     elif method == 10:
-        return np.log((X_modeled - X_observed) / X_observed)
+        return np.log((X_modeled - X_observed) / X_observed * 100)
     elif method == 11:
         return np.log((X_modeled - X_observed) / A)
     else:
         raise ValueError("Invalid method number")
+
+
 
 def correct_quantile_biases(X_modeled, X_biases, method, area=None):
     """

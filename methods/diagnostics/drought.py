@@ -10,6 +10,7 @@ import spei as si
 import scipy.stats as scs
 
 
+
 def aggregate_and_rolling_sum(Q_i,
                               window, 
                               aggregate = None):
@@ -40,6 +41,7 @@ def calculate_ssi_values(data,
                 ssi[m][r] = pd.DataFrame(index = Q_ri.index, columns=nodes)
                 for n in nodes:
                     ssi[m][r][n] = si.ssfi(Q_ri[n], dist=scs.gamma)
+                ssi[m][r] = ssi[m][r].astype(float)
         else:
             Q_i = data[m][nodes]
             Q_i = aggregate_and_rolling_sum(Q_i, window, aggregate)
@@ -47,49 +49,5 @@ def calculate_ssi_values(data,
             ssi[m] = pd.DataFrame(index = Q_i.index, columns=nodes)
             for n in nodes:
                 ssi[m][n] = si.ssfi(Q_i[n], dist=scs.gamma)
-    
+            ssi[m] = ssi[m].astype(float)
     return ssi
-
-
-
-
-def get_drought_metrics(ssi):
-    """Get drought start and end dates, magnitude, severity, and duration.
-
-    Args:
-        ssi (pd.Series): Array of SSI values.  
-
-    Returns:
-        pd.DataFrame: DataFrame containing all drought metrics for each drought period.
-    """
-    
-    drought_data = {}
-    drought_counter = 0
-    in_critical_drought = False
-    drought_days = []
-
-    for ind in range(len(ssi)):
-        if ssi.values[ind] < 0:
-            drought_days.append(ind)
-            
-            if ssi.values[ind] <= -1:
-                in_critical_drought = True
-        else:
-            # Record drought info once it ends
-            if in_critical_drought:
-                drought_counter += 1
-                drought_data[drought_counter] = {
-                    'start':ssi.index[drought_days[0]],
-                    'end': ssi.index[drought_days[-1]],
-                    'duration': len(drought_days),
-                    'magnitude': sum(ssi.values[drought_days]),
-                    'severity': min(ssi.values[drought_days])
-                }
-            
-            # Reset counters
-            in_critical_drought = False
-            drought_days = [] 
-
-    drought_metrics = pd.DataFrame(drought_data).transpose()
-    return drought_metrics
-

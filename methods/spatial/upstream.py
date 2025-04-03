@@ -1,215 +1,188 @@
 """
-Used for identifying upstream gauges for relative to 
-USGS gauge locations or NHD comid numbers.
+This module provides a class-based implementation for managing upstream gauge data
+associated with USGS gauge locations or NHD COMID numbers. It encapsulates file handling,
+upstream gauge retrieval, and processing logic into a clean, reusable, and object-oriented workflow.
 
-The module contains the following functions:
-    * ensure_file_exists - Ensure that the file exists. If it does not, create it with initial JSON data.
-    * update_upstream_gauge_file - Update the upstream gauges file without overwriting it.
-    * check_station_in_upstream_gauges - Check if the fid is in the file.
-    * get_upstream_gauges_from_file - Get the upstream gauges of a station.
-    * get_upstream_gauges_single_site - Get the upstream gauges of a station.
-    * get_upstream_gauges_for_id_list - Get the upstream gauges for a list of comid sites.
-    * get_immediate_upstream_sites - Get the immediate upstream sites for a given site.
+The `UpstreamGaugeManager` class allows users to:
+- Ensure that required data files exist, creating them if necessary.
+- Add or update upstream gauge data to JSON files without overwriting existing entries by default.
+- Retrieve upstream gauges for single or multiple sites, either from stored data or dynamically using `pynhd`.
+- Identify immediate upstream sites from a given set of upstream gauge relationships.
+
+Example usage:
+manager = UpstreamGaugeManager(data_dir="/path/to/data")
+upstream_gauges = manager.get_gauges_for_single_site(fid="12345", file="comid_upstream_gauges.json")
+immediate_sites = manager.get_immediate_sites(upstream_gauges, site_id="12345")
 """
-
 
 import os
 import json
 import pynhd as nhd
 
-from methods.utils.directories import DATA_DIR
-from methods.utils.constants import GEO_CRS
+from config import DATA_DIR
+from config import STATION_UPSTREAM_GAGE_FILE, COMID_UPSTREAM_GAGE_FILE, DATA_DIR
 
-comid_upstream_gauge_file = f'{DATA_DIR}/comid_upstream_gauges.json'
-station_upstream_gauge_file = f'{DATA_DIR}/station_upstream_gauges.json'
 
-####################################################################################################
-
-def ensure_file_exists(file):
-    """Ensure that the file exists. If it does not, create it with initial JSON data.
-
-    Args:
-    file (str): The file to check.
+class UpstreamGaugeManager:
     """
-    try:
+    A class to manage upstream gauge identification and data handling.
+
+    Attributes:
+    ----------
+    data_dir : str
+        Base directory for data files.
+    comid_file : str
+        File path for COMID upstream gauge data.
+    station_file : str
+        File path for station upstream gauge data.
+    """
+
+    def __init__(self, 
+                 data_dir=DATA_DIR, 
+                 comid_file_name=COMID_UPSTREAM_GAGE_FILE, 
+                 station_file_name=STATION_UPSTREAM_GAGE_FILE):
+        """
+        Initialize the UpstreamGaugeManager.
+
+        Args:
+        -----
+        data_dir : str
+            Base directory for data files.
+        comid_file_name : str
+            File name for COMID upstream gauge data.
+        station_file_name : str
+            File name for station upstream gauge data.
+        """
+        self.data_dir = data_dir
+        self.comid_file = os.path.join(data_dir, comid_file_name)
+        self.station_file = os.path.join(data_dir, station_file_name)
+        self.ensure_file_exists(self.comid_file)
+        self.ensure_file_exists(self.station_file)
+
+    @staticmethod
+    def ensure_file_exists(file):
+        """Ensure the file exists. If not, create it with empty JSON content."""
         if not os.path.isfile(file):
             with open(file, 'w') as f:
                 json.dump({}, f)
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return False
-    return True
 
-def update_upstream_gauge_file(all_upstream_gauges,
-                                file=comid_upstream_gauge_file,
-                                overwrite=False):
-    """Update the upstream gauges file without overwriting it.
-    
-    Args:
-    all_upstream_gauges (dict): The upstream gauges for each comid.
-    """
-    ensure_file_exists(file)
-    
-    # Load
-    with open(file, 'r') as f:
-        archieved_upstream_gauges = json.load(f)
-        
-    # Modify 
-    for id in all_upstream_gauges.keys():
-        if overwrite:
-            archieved_upstream_gauges[id] = all_upstream_gauges[id]
-        elif not overwrite and id not in archieved_upstream_gauges.keys():
-            archieved_upstream_gauges[id] = all_upstream_gauges[id]
-    # Save  
-    with open(file, 'w') as f:  
-        json.dump(archieved_upstream_gauges, f)
-    return      
-
-
-def check_station_in_upstream_gauges(fid,
-                                    file=comid_upstream_gauge_file):
-    """Check if the fid is in the file.
-    The <filename> is checked to see if comid is in the file. If it is, True is returned. If it is not, False is returned.
-    
-    Args:
-    fid (str): The fid for the site
-    
-    Returns:
-    bool: True if comid is in the file, False otherwise.
-    """
-    ensure_file_exists(file)
-    
-    # Check if the file exists
-    with open(file, 'r') as f:
-        upstream_gauges = json.load(f)
-        if fid in upstream_gauges.keys():
-            return True
-        else:
-            return False        
-        
-
-def get_upstream_gauges_from_file(fid,
-                                  fsource='comid',
-                                  file=comid_upstream_gauge_file):
-    """Get the upstream gauges of a station.
-    The <filename> is checked to see if comid is in the file. If it is, the
-    upstream gauges are returned. If it is not, None is returned.
-    
-    Args:
-    fid (str): The id for the site
-    fsource (str): The source of the id (comid or nwissite)
-    
-    Returns:
-    list: The list of upstream gauges.
-    """
-    # Check if station is in the file
-    if not check_station_in_upstream_gauges(fid, file):
-        return None
-    else:
+    def update_gauge_file(self, 
+                          new_data, 
+                          file, 
+                          overwrite=False):
+        """Update the gauge file with new data."""
+        self.ensure_file_exists(file)
         with open(file, 'r') as f:
-            upstream_gauges = json.load(f)
-        return upstream_gauges[fid]
+            current_data = json.load(f)
+
+        for key, value in new_data.items():
+            if overwrite or key not in current_data:
+                current_data[key] = value
+
+        with open(file, 'w') as f:
+            json.dump(current_data, f)
+
+    def is_station_in_file(self, 
+                           fid, 
+                           file):
+        """Check if a station ID exists in the specified file."""
+        self.ensure_file_exists(file)
+        with open(file, 'r') as f:
+            data = json.load(f)
+        return fid in data
+
+    def get_gauges_from_file(self, 
+                             fid, 
+                             file):
+        """Retrieve the upstream gauges for a station from the file."""
+        if not self.is_station_in_file(fid, file):
+            return None
+        with open(file, 'r') as f:
+            data = json.load(f)
+        return data[fid]
+
+    def get_gauges_for_single_site(self, 
+                                   fid, 
+                                   fsource='comid', 
+                                   overwrite=False,
+                                   restrict_to_list=False,
+                                   fid_list=None):
+        """Retrieve or calculate the upstream gauges for a single site."""
         
-
-def get_upstream_gauges_single_site(fid, 
-                        file=comid_upstream_gauge_file,
-                        fsource='comid',
-                        overwrite=False):
-    """Get the upstream gauges of a station.
-    The <filename> is checked to see if comid is in the file. If it is, the
-    upstream gauges are returned. If it is not, the upstream gauges are found using pynhd. 
-
-    Args:
-    comid (str): The comid for the site
-
-    Returns:
-    list: The list of upstream gauges.
-    """
-    # Check if already in file
-    upstream_gauges = get_upstream_gauges_from_file(fid,
-                                                    fsource=fsource, 
-                                                    file=file)
-    
-    upstream_gauges = None if overwrite else upstream_gauges
-    if upstream_gauges is not None:
-        return upstream_gauges
-    
-    # Else find the upstream gauges using pynhd
-    nldi = nhd.NLDI()
-    try:
-        if fsource == 'nwissite' and 'USGS-' not in fid:
-            usgs_fid = f'USGS-{fid}'
-        else:
-            usgs_fid = fid
-        upstream_data = nldi.navigate_byid(fid = usgs_fid,
-                                           fsource=fsource,
-                                           source='nwissite',
-                                           navigation='upstreamTributaries',
-                                           distance=1000)
-    
-        # Store and clean gauge IDs (just numbers as strings)
-        if fsource == 'comid':
-            upstream_gauges = list(set(list(upstream_data['comid'].values)))
-        elif fsource == 'nwissite':
-            upstream_gauges = list(upstream_data['identifier'].values)
-            upstream_gauges = [str(c.split('-')[1]) for c in upstream_gauges]
-            upstream_gauges = list(set(upstream_gauges))
+        file = self.comid_file if fsource == 'comid' else self.station_file
         
-        # Remove the current gauge from the list
-        upstream_gauges = [str(c) for c in upstream_gauges if c != fid]
+        gauges = None if overwrite else self.get_gauges_from_file(fid, file)
+        if gauges is not None:
+            return gauges
+
+        nldi = nhd.NLDI()
+        usgs_fid = f'USGS-{fid}' if fsource == 'nwissite' and 'USGS-' not in fid else fid
+
+        try:
+            upstream_data = nldi.navigate_byid(
+                fid=usgs_fid,
+                fsource=fsource,
+                source='nwissite',
+                navigation='upstreamTributaries',
+                distance=1000
+            )
+            if fsource == 'comid':
+                gauges = list(set(upstream_data['comid'].values))
+            elif fsource == 'nwissite':
+                gauges = [str(c.split('-')[1]) for c in upstream_data['identifier'].values]
+                gauges = list(set(gauges))
+
+            gauges = [str(c) for c in gauges if c != fid]
+        except Exception as e:
+            print(f"Failed to find upstream gauges for {fsource} {fid}: {e}")
+            return []
+
+        # Restrict to the provided list of FIDs
+        if restrict_to_list:
+            if fid_list is None:
+                raise ValueError("fid_list must be provided when restrict_to_list is True.")
+            gauges = [g for g in gauges if g in fid_list]
+
+        self.update_gauge_file({fid: gauges}, file, overwrite)
+        return gauges
+
+    def get_gauges_for_multiple_sites(self, 
+                                      fids, 
+                                      fsource='comid', 
+                                      overwrite=False, 
+                                      restrict_to_list=False):
+        """Retrieve upstream gauges for multiple sites."""
         
-    except:
-        print(f'No upstream gauges found for {fsource}: {fid}')
-        return None
-    
-    # update file    
-    update_upstream_gauge_file({fid: upstream_gauges}, 
-                                file=file,
-                                overwrite=overwrite)
-    return upstream_gauges
+        result = {}
+        for fid in fids:
+            gauges = self.get_gauges_for_single_site(fid=fid, 
+                                                     fsource=fsource, 
+                                                     overwrite=overwrite,
+                                                     restrict_to_list=restrict_to_list,
+                                                     fid_list=fids)
+            if gauges is not None:
+                result[fid] = [g for g in gauges if g in fids] if restrict_to_list else gauges
+        return result
 
-def get_upstream_gauges_for_id_list(fids,
-                                    fsource='comid',
-                                    file=comid_upstream_gauge_file,
-                                    overwrite=False,
-                                    restrict_to_list=False):
-    """Get the upstream gauges for a list of comid sites.
-    
-    Args:
-    comids (list): The list of comids for the sites
-    
-    Returns:
-    dict: The upstream gauges for each comid.
-    """
-    N_SITES = len(fids)
-    all_upstream_gauges = {}
-    for i, id in enumerate(fids):
-        if i % 50 == 0:
-            print(f'Getting upstream gauges for {fsource} {i} of {N_SITES}')
-        upstream_gauges = get_upstream_gauges_single_site(id, 
-                                                          fsource=fsource, 
-                                                          file=file,
-                                                          overwrite=overwrite)
-        if upstream_gauges is not None:
-            upstream_gauges_from_list = [c for c in upstream_gauges if c in fids] if restrict_to_list else upstream_gauges
-            all_upstream_gauges[id] = upstream_gauges_from_list
-    return all_upstream_gauges
+    @staticmethod
+    def find_immediate_upstream_sites(upstream_gauges):
+        """Identify immediate upstream sites."""
+        immediate = {}
+        for site, upstream_sites in upstream_gauges.items():
+            immediate[site] = [
+                upstream for upstream in upstream_sites
+                if not any(upstream in upstream_gauges.get(intermediate, [])
+                           for intermediate in upstream_sites if intermediate != upstream)
+            ]
+        return immediate
 
-                        
-def get_immediate_upstream_sites(upstream_gauges_dict, site_number):
-    # Check if the site_number is in the dictionary
-    if site_number not in upstream_gauges_dict.keys():
-        raise ValueError(f"Site number {site_number} not found in the dictionary.")
-
-    # Get all upstream sites for the given site_number
-    all_upstream_sites = upstream_gauges_dict[site_number]
-
-    # Identify immediate upstream sites
-    immediate_sites = []
-    for upstream_site in all_upstream_sites:
-        # A site is immediate upstream if it does not appear as an upstream site
-        # in the list of any other immediate upstream site
-        if not any(upstream_site in upstream_gauges_dict.get(other_site, []) for other_site in all_upstream_sites if other_site != upstream_site):
-            immediate_sites.append(upstream_site)
-    immediate_sites= list(set(immediate_sites))
-    return immediate_sites
+    @staticmethod
+    def get_immediate_sites(upstream_gauges, site_id):
+        """Get immediate upstream sites for a specific site."""
+        if site_id not in upstream_gauges:
+            raise ValueError(f"Site ID {site_id} not found.")
+        all_sites = upstream_gauges[site_id]
+        return [
+            site for site in all_sites
+            if not any(site in upstream_gauges.get(other, []) for other in all_sites if other != site)
+        ]

@@ -1,10 +1,11 @@
 """
 Functions used to filter datasets.
 """
+import pandas as pd
 import geopandas as gpd
 from methods.utils.directories import PYWRDRB_DIR
-from methods.utils.contants import GEO_CRS
-from methods.utils.nid import load_drb_boundary
+from methods.utils.constants import GEO_CRS
+from methods.retrieval.NID import load_drb_boundary
 
 
 
@@ -49,4 +50,14 @@ def filter_usgs_nwis_query_by_type(query_result,
     return query_result
 
 
-
+def filter_gage_data_by_record_length(gage_data, MIN_YEARS):
+    
+    # Check that start_date and end_date columns exist
+    if 'start_date' not in gage_data.columns or 'end_date' not in gage_data.columns:
+        raise ValueError("gage_data must have columns 'start_date' and 'end_date'")
+    
+    ### Filter data 
+    ## Drop sites with less than 10 years of data
+    gage_data['years'] = (pd.to_datetime(gage_data['end_date']) - pd.to_datetime(gage_data['begin_date'])).dt.days / 365.25
+    gage_data = gage_data[gage_data['years'] > MIN_YEARS]
+    return gage_data

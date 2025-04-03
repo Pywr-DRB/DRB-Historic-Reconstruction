@@ -35,9 +35,11 @@ model_colors = {
     'obs_pub_nhmv10_ObsScaled': '#F27300', 
     'obs_pub_nhmv10_ensemble' : '#F9B572', 
     'obs_pub_nhmv10_ObsScaled_ensemble' : '#F9B572', 
+    'obs_pub_nhmv10_BC_ObsScaled_ensemble' : '#F9B572', 
     'obs_pub_nwmv21' : '#0174BE', 
     'obs_pub_nwmv21_ensemble': '#9CD2F6',
     'obs_pub_nwmv21_ObsScaled' : '#0174BE', 
+    'obs_pub_nwmv21_BC_ObsScaled_ensemble': '#9CD2F6',
     'obs_pub_nwmv21_ObsScaled_ensemble': '#9CD2F6'
     }
 
@@ -51,8 +53,10 @@ model_labels = {
     'obs_pub_nwmv21_ensemble':'PUB-NWM Ensemble',
     'obs_pub_nhmv10_ObsScaled' : 'PUB-NHM',
     'obs_pub_nhmv10_ObsScaled_ensemble' : 'PUB-NHM Ensemble',
+    'obs_pub_nhmv10_BC_ObsScaled_ensemble' : 'Ensemble',
     'obs_pub_nwmv21_ObsScaled' : 'PUB-NWM',
-    'obs_pub_nwmv21_ObsScaled_ensemble':'PUB-NWM Ensemble'
+    'obs_pub_nwmv21_ObsScaled_ensemble':'PUB-NWM Ensemble',
+    'obs_pub_nwmv21_BC_ObsScaled_ensemble':'PUB-BC-NWM Ensemble'
     }
 
 
@@ -108,9 +112,74 @@ upper_bound_metric_scores = {'nse':1, 'kge':1, 'r':1, 'alpha':2, 'beta':2,
 
 
 # Metric labels
-metric_labels = {'nse': 'NSE', 'kge': 'KGE', 'r': 'Pearson Correlation', 'alpha': 'Alpha', 'beta': 'Beta',
-                 'log_nse': 'Log-NSE', 'log_kge': 'Log-KGE', 'log_r': 'Log Pearson Correlation', 
-                 'log_alpha': 'Log-Alpha', 'log_beta': 'Log-Beta', 
-                 'Q0.1pbias': '0.1% Bias', 'Q0.2pbias': '0.2% Bias', 'Q0.3pbias': '0.3% Bias', 
-                 'AbsQ0.1pbias': '0.1% Abs. Bias', 'AbsQ0.2pbias': '0.2% Abs. Bias', 
-                 'AbsQ0.3pbias': '0.3% Abs. Bias'}
+metric_labels = {
+    'r' : 'Pearson Correlation',
+    'nse' : 'NSE',
+    'kge' : 'KGE',
+    'alpha' : 'Relative Variability (KGE Alpha)',
+    'beta' : 'Relative Bias (KGE Beta)',
+    "Q0.1pbias" : 'Percent Bias (Q0.1)',
+    "Q0.2pbias" : 'Percent Bias (Q0.2)',
+    "Q0.3pbias" : 'Percent Bias (Q0.3)',
+    "AbsQ0.1pbias" : 'Absolute Percent Bias (Q0.1)',
+    "AbsQ0.2pbias" : 'Absolute Percent Bias (Q0.2)',
+    "AbsQ0.3pbias" : 'Absolute Percent Bias (Q0.3)',
+}
+
+for k in list(metric_labels.keys()):
+    metric_labels[f'log_{k}'] = f'Log Flow {metric_labels[k]}'
+
+metric_limits = {
+    'r' : [0.5, 1.0],
+    'nse' : [0.0, 1.0],
+    'kge' : [0.0, 1.0],
+    'alpha' : [0.0, 2.0],
+    'beta' : [0.0, 2.0],
+    'Q0.1pbias' : [-100, 100],
+    'Q0.2pbias' : [-100, 100],
+    'Q0.3pbias' : [-100, 100],
+    'AbsQ0.1pbias' : [0, 100],
+    'AbsQ0.2pbias' : [0, 100],
+    'AbsQ0.3pbias' : [0, 100],
+}
+for k, v in list(metric_limits.items()):
+    metric_limits[f'log_{k}'] = v
+
+metric_ideal = {
+    'r' : 1.0,
+    'nse' : 1.0,
+    'kge' : 1.0,
+    'alpha' : 1.0,
+    'beta' : 1.0,
+    'Q0.1pbias' : 0.0,
+    'Q0.2pbias' : 0.0,
+    'Q0.3pbias' : 0.0,
+    'AbsQ0.1pbias' : 0.0,
+    'AbsQ0.2pbias' : 0.0,
+    'AbsQ0.3pbias' : 0.0,
+}
+
+for k, v in list(metric_ideal.items()):
+    metric_ideal[f'log_{k}'] = v
+
+
+
+
+model_colors = {
+    'obs': 'black',
+    'nhmv10' : 'cornflowerblue', 
+    'nwmv21' : '#385723',
+    'obs_pub_nhmv10' : '#F27300',
+    'obs_pub_nhmv10_ObsScaled': '#F27300', 
+    'obs_pub_nhmv10_ensemble' : '#F9B572', 
+    'obs_pub_nhmv10_ObsScaled_ensemble' : '#F9B572', 
+    'obs_pub_nwmv21' : '#0174BE', 
+    'obs_pub_nwmv21_ensemble': '#9CD2F6',
+    'obs_pub_nwmv21_ObsScaled' : '#0174BE', 
+    'obs_pub_nwmv21_ObsScaled_ensemble': '#9CD2F6'
+    }
+
+for K in range(2, 11):
+    for BC in ['_BC', '']:
+        model_colors[f'obs_pub_nhmv10{BC}_K{K}_ensemble'] = '#F9B572'
+        model_labels[f'obs_pub_nhmv10{BC}_K{K}_ensemble'] = f'PUB-NHM K{K} Ensemble'
