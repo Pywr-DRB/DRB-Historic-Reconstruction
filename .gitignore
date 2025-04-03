@@ -8,3 +8,14 @@ __pycache__/diagnostic_plots.cpython-310.pyc
 .ipynb_checkpoints/
 .idea/
 outputs/LOO/loo_reconstruction_nhmv10_ensemble.hdf5
+outputs/*
+*.err
+*.out
+data/NWMv21/*
+
+*.zip
+*.nc
+
+./archive/*
+./notebooks/*
+./pywrdrb_outputs/
