@@ -1,0 +1,38 @@
+"Table 3. Selected (36) NHM-PRMS daily output variables for the simulation time period 1980-10-01 to 2016-12-31. [HRU, hydrologic response unit; GWR, groundwater reservoir; ET, evapotranspiration; cfs, cubic feet per second]",,
+Variable name,Description,Units
+dprst_stor_hru,Surface-depression storage for each HRU,inches
+gwres_flow,Groundwater discharge from each GWR to the stream network,inches
+gwres_stor,Storage in each GWR,inches
+hru_actet,Actual ET for each HRU,inches
+hru_intcpstor,HRU area-weighted average interception storage in the canopy for each HRU,inches
+hru_lateral_flow,Lateral flow to stream network from each HRU,inches
+hru_outflow,Total flow leaving each HRU,cfs
+hru_ppt,Precipitation distributed to each HRU,inches
+hru_rain,Rain distributed to each HRU,inches
+hru_snow,Snow distributed to each HRU,inches
+hru_storage,Storage for each HRU,inches
+infil,Infiltration to the capillary and preferential-flow reservoirs for each HRU,inches
+pkwater_equiv,Snowpack water equivalent on each HRU,inches
+potet,Potential ET for each HRU,inches
+recharge,Recharge to the associated GWR as sum of soil_to_gw and ssr_to_gw for each HRU,inches
+seg_gwflow,Area-weighted average groundwater discharge for each segment from HRUs contributing flow to the segment and upstream HRUs,inches
+seg_lateral_inflow,Lateral inflow entering a segment,cfs
+seg_outflow,Streamflow leaving a segment,cfs
+seg_sroff,Area-weighted average surface runoff for each segment from HRUs contributing flow to the segment and upstream HRUs,inches
+seg_ssflow,Area-weighted average interflow for each segment from HRUs contributing flow to the segment and upstream HRUs,inches
+seg_upstream_inflow,Sum of inflow from upstream segments,cfs
+seginc_gwflow,Area-weighted average groundwater discharge for each segment from HRUs contributing flow to the segment,cfs
+seginc_sroff,Area-weighted average surface runoff for each segment from HRUs contributing flow to the segment,cfs
+seginc_ssflow,Area-weighted average interflow for each segment from HRUs contributing flow to the segment,cfs
+slow_flow,Interflow from gravity reservoir storage that flows to the stream network for each HRU,inches
+snowcov_area,Snow-covered area on each HRU prior to melt and sublimation unless snowpack depleted,decimal fraction
+soil_moist,Storage of capillary reservoir for each HRU,inches
+soil_moist_tot,Total soil-zone water storage (soil_moist + ssres_stor),inches
+soil_rechr,Storage for recharge zone (upper portion) of the capillary reservoir that is available for both evaporation and transpiration,inches
+sroff,Surface runoff to the stream network for each HRU,inches
+ssr_to_gw,Drainage from the gravity-reservoir to the associated GWR for each HRU,inches
+ssres_flow,Interflow from gravity and preferential-flow reservoirs to the stream network for each HRU,inches
+ssres_stor,Storage in the gravity and preferential-flow reservoirs for each HRU,inches
+swrad,Shortwave radiation distributed to each HRU,Langleys
+tmaxf,Maximum air temperature distributed to each HRU,degrees Fahrenheit
+tminf,Minimum air temperature distributed to each HRU,degrees Fahrenheit
