@@ -28,7 +28,7 @@ notebooks/*
 
 /data/DRB_spatial/*
 
-/figures/
+/figures/*
 !/figures/manuscript_figures/
 !/figures/si_figures/
 
