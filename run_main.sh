@@ -21,10 +21,10 @@ np=$(($SLURM_NTASKS_PER_NODE * $SLURM_NNODES))
 ### Data retrieval & preprocessing
 #################################################################
 
-# Copy NHMv1.0 streamflow data from Input-Data-Retrieval repo into Historic-Reconstruction/data
+# Copy NHMv1.0 streamflow data from Input-Data-Retrieval repo into DRB-Historic-Reconstruction/data
 cd ..
-cp -r ./Input-Data-Retrieval/datasets/NHMv10/* ./Historic-Reconstruction/data/NHMv10/
-cd Historic-Reconstruction
+cp -r ./Input-Data-Retrieval/datasets/NHMv10/* ./DRB-Historic-Reconstruction/data/NHMv10/
+cd DRB-Historic-Reconstruction
 
 
 echo "Retrieving USGS, NID, catchment geometry, Daymet and NLDI data for DRB gauges..."
