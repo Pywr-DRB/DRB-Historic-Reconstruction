@@ -15,7 +15,10 @@ data/NWMv21/*
 
 *.zip
 *.nc
+*.hdf5
 
 ./archive/*
 ./notebooks/*
+
+./outputs/*
 ./pywrdrb_outputs/
